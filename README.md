@@ -4,7 +4,7 @@ An intelligent, AI-powered interview practice application built with Streamlit. 
 
 ## 🚀 Features
 
--   **Resume Analysis**: Extracts text from PDF resumes to understand the candidate's background.
+-   **Resume Analysis**: Extracts text from PDF resumes to understand the candidate's background using `pdfplumber`.
 -   **Dynamic Question Generation**: Creates 5 relevant technical questions tailored to the selected job role and resume content.
 -   **Real-time AI Feedback**: Evaluates answers instantly, providing a score (0-10), constructive feedback, and an ideal answer.
 -   **Dual AI Engine Support**:
@@ -16,17 +16,18 @@ An intelligent, AI-powered interview practice application built with Streamlit. 
 ## 🛠️ Tech Stack
 
 -   **Python 3.x**
--   **Streamlit**: Frontend framework
--   **pdfplumber**: PDF text extraction
--   **Groq API**: High-speed LLM inference
--   **Google Gemini API**: Generative AI model
--   **Python-dotenv**: Environment variable management
+-   **Streamlit**: Frontend framework for rapid prototyping.
+-   **pdfplumber**: Robust PDF text extraction.
+-   **Groq API**: High-speed LLM inference for generating questions and feedback.
+-   **Google Gemini API**: Backup Generative AI model.
+-   **Python-dotenv**: Secure environment variable management.
 
 ## 📋 Prerequisites
 
 Before running the application, ensure you have the following installed:
 
--   Python 3.8 or higher
+-   **Python 3.8** or higher
+-   **Git**
 -   API Keys:
     -   [Groq Cloud API Key](https://console.groq.com/keys)
     -   [Google AI Studio (Gemini) API Key](https://aistudio.google.com/app/apikey)
@@ -90,6 +91,7 @@ AI_Interview_Coach/
 ├── app.py                  # Main Streamlit application
 ├── requirements.txt        # Python dependencies
 ├── .env                    # Environment variables (not pushed to git)
+├── .gitignore              # Git ignore file
 └── services/
     ├── ai_engine.py        # Logic for interacting with Groq/Gemini APIs
     └── resume_parser.py    # PDF text extraction logic
