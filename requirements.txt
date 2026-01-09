@@ -1,0 +1,5 @@
+streamlit
+pdfplumber
+groq
+google-generativeai
+python-dotenv
