@@ -1,4 +1,4 @@
-# AI Interview Coach 🎯
+# AI Interview Coach v1.2🎯
 
 An intelligent, AI-powered interview practice application with multiple pages, analytics, PDF reports, and authentication. Built with Streamlit and powered by Groq/Gemini AI.
 
