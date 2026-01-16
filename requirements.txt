@@ -1,5 +1,10 @@
-streamlit
+streamlit>=1.31.0
 pdfplumber
 groq
-google-generativeai
+google-genai
 python-dotenv
+reportlab
+plotly
+pandas
+mysql-connector-python
+bcrypt

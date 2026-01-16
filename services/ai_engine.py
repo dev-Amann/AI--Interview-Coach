@@ -1,6 +1,6 @@
 import os
 import json
-import google.generativeai as genai
+from google import genai
 from groq import Groq
 from dotenv import load_dotenv
 
@@ -18,68 +18,93 @@ class AIEngine:
             except Exception as e:
                 print(f"Groq Init Error: {e}")
 
+        self.gemini_client = None
         if self.gemini_api_key:
             try:
-                genai.configure(api_key=self.gemini_api_key)
+                self.gemini_client = genai.Client(api_key=self.gemini_api_key)
             except Exception as e:
                 print(f"Gemini Init Error: {e}")
 
-    def generate_questions(self, resume_text, job_role):
+    def generate_questions(self, resume_text, job_role, category="Technical", difficulty="Medium"):
+        difficulty_guidance = {
+            "Easy": "Focus on fundamental concepts and basic knowledge. Questions should be suitable for freshers or entry-level candidates.",
+            "Medium": "Include intermediate-level questions that test both theory and practical application. Suitable for candidates with 1-3 years experience.",
+            "Hard": "Ask advanced questions involving system design, optimization, edge cases, and deep technical knowledge. Suitable for senior positions."
+        }
+        
+        category_guidance = {
+            "Technical": f"Generate strictly technical interview questions specific to the {job_role} role. Focus on coding, tools, frameworks, and technical problem-solving.",
+            "Behavioral": "Generate behavioral interview questions using the STAR method (Situation, Task, Action, Result). Focus on teamwork, leadership, conflict resolution, and past experiences.",
+            "HR": "Generate HR interview questions about career goals, salary expectations, company culture fit, strengths/weaknesses, and work preferences."
+        }
+        
         prompt = f"""
-        You are an expert technical interviewer.
+        You are an expert interviewer conducting a {category.lower()} interview.
+        
         Context:
         - Job Role: {job_role}
+        - Interview Type: {category}
+        - Difficulty: {difficulty}
         - Candidate Resume Snippet: {resume_text[:3000]}...
 
+        {category_guidance.get(category, category_guidance["Technical"])}
+        
+        Difficulty Level: {difficulty}
+        {difficulty_guidance.get(difficulty, difficulty_guidance["Medium"])}
+
         Task:
-        Generate strictly 5 technical interview questions relevant to the role and resume.
-        Difficulty: Beginner to Advance.
-        Output Format: return ONLY a raw JSON list of strings. Do not use Markdown blocks.
+        Generate strictly 5 interview questions for this {category.lower()} interview.
+        The questions should be relevant to both the role and the candidate's background.
+        
+        Output Format: Return ONLY a raw JSON list of 5 strings. Do not use Markdown blocks.
         Example: ["Question 1", "Question 2", "Question 3", "Question 4", "Question 5"]
         """
         
-        print(f"DEBUG: Groq Key Present: {bool(self.groq_api_key)}")
-        print(f"DEBUG: Gemini Key Present: {bool(self.gemini_api_key)}")
-
         if self.groq_client:
-            print("DEBUG: Attempting Groq...")
             try:
                 chat_completion = self.groq_client.chat.completions.create(
                     messages=[{"role": "user", "content": prompt}],
                     model="llama-3.3-70b-versatile",
                     temperature=0.7
                 )
-                print("DEBUG: Groq Success")
                 content = chat_completion.choices[0].message.content
                 return self._clean_and_parse_json(content)
             except Exception as e:
-                print(f"ERROR: Groq Generation Error: {e}")
+                print(f"Groq Generation Error: {e}")
         
-        if self.gemini_api_key:
-            print("DEBUG: Attempting Gemini...")
+        if self.gemini_client:
             try:
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                response = model.generate_content(prompt)
-                print("DEBUG: Gemini Success")
+                response = self.gemini_client.models.generate_content(
+                    model='gemini-1.5-flash',
+                    contents=prompt
+                )
                 return self._clean_and_parse_json(response.text)
             except Exception as e:
-                print(f"ERROR: Gemini Generation Error: {e}")
+                print(f"Gemini Generation Error: {e}")
 
         return ["Could not generate questions. Please check your API keys.", "", "", "", ""]
 
     def evaluate_answer(self, question, answer, job_role):
         prompt = f"""
-        Act as an Interviewer for a {job_role} position.
+        Act as an experienced Interviewer for a {job_role} position.
+        
         Question: "{question}"
         Candidate Answer: "{answer}"
 
-        Evaluate the answer. 
-        Return ONLY a JSON object with these exact keys:
-        - "score": A number between 0 and 10.
-        - "feedback": A short constructive feedback sentence (max 30 words).
-        - "ideal_answer": A specific, high-quality answer to the question (max 100 words) that demonstrates best practices.
+        Evaluate the answer thoroughly.
         
-        Do not include markdown formatting.
+        Return ONLY a JSON object with these exact keys:
+        - "score": A number between 0 and 10 (be fair but critical).
+        - "feedback": A constructive feedback sentence explaining what was good and what can be improved (max 40 words).
+        - "ideal_answer": A high-quality, comprehensive answer that demonstrates best practices and expertise (max 120 words).
+        
+        Scoring Guide:
+        - 0-3: Poor answer, missing key concepts or incorrect
+        - 4-6: Average answer, partially correct with room for improvement
+        - 7-8: Good answer, mostly correct with minor improvements needed
+        - 9-10: Excellent answer, comprehensive and demonstrates expertise
+        
+        Do not include markdown formatting. Return only valid JSON.
         """
 
         if self.groq_client:
@@ -94,15 +119,59 @@ class AIEngine:
             except Exception as e:
                 print(f"Groq Eval Error: {e}")
         
-        if self.gemini_api_key:
+        if self.gemini_client:
             try:
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                response = model.generate_content(prompt)
+                response = self.gemini_client.models.generate_content(
+                    model='gemini-1.5-flash',
+                    contents=prompt
+                )
                 return self._clean_and_parse_json(response.text)
             except Exception as e:
                 print(f"Gemini Eval Error: {e}")
 
-        return {"score": 0, "feedback": "Error evaluating answer."}
+        return {"score": 0, "feedback": "Error evaluating answer.", "ideal_answer": "Unable to generate."}
+
+    def generate_skill_analysis(self, scores, questions, answers):
+        prompt = f"""
+        Analyze this interview performance and provide skill recommendations.
+        
+        Questions and Scores:
+        {json.dumps([{"question": q, "score": s} for q, s in zip(questions, scores)], indent=2)}
+        
+        Based on the scores, identify:
+        1. Top 2 strengths (areas with highest scores)
+        2. Top 2 areas needing improvement (areas with lowest scores)
+        3. 3 specific actionable recommendations to improve
+        
+        Return ONLY a JSON object:
+        {{
+            "strengths": ["strength 1", "strength 2"],
+            "improvements": ["area 1", "area 2"],
+            "recommendations": ["tip 1", "tip 2", "tip 3"]
+        }}
+        """
+        
+        if self.groq_client:
+            try:
+                chat_completion = self.groq_client.chat.completions.create(
+                    messages=[{"role": "user", "content": prompt}],
+                    model="llama-3.3-70b-versatile",
+                    temperature=0.5
+                )
+                content = chat_completion.choices[0].message.content
+                return self._clean_and_parse_json(content)
+            except Exception as e:
+                print(f"Skill Analysis Error: {e}")
+        
+        return {
+            "strengths": ["Technical fundamentals", "Problem approach"],
+            "improvements": ["Depth of explanation", "Practical examples"],
+            "recommendations": [
+                "Practice explaining concepts step by step",
+                "Include real-world examples from your experience",
+                "Review core concepts in weaker areas"
+            ]
+        }
 
     def _clean_and_parse_json(self, text):
         try:

@@ -1,3 +1,10 @@
-venv/
 .env
+.history
+venv/
+venv
+dist
+.vscode
+.DS_Store
 __pycache__/
+*.log
+*.tmp

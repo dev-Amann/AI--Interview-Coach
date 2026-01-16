@@ -1,0 +1,129 @@
+/* Configuration Card */
+.config-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+/* Question Box */
+.question-box {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--primary);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.question-number {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.question-text {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+/* Feedback Box */
+.feedback-box {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+
+.feedback-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #166534;
+    margin-bottom: 8px;
+}
+
+.feedback-text {
+    font-size: 14px;
+    color: #15803d;
+    line-height: 1.6;
+}
+
+/* Ideal Answer Box */
+.ideal-box {
+    background: #fefce8;
+    border: 1px solid #fef08a;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.ideal-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #854d0e;
+    margin-bottom: 8px;
+}
+
+.ideal-text {
+    font-size: 14px;
+    color: #a16207;
+    color: #a16207;
+    line-height: 1.6;
+}
+
+/* Score Display */
+.score-display {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 24px;
+    display: inline-block;
+    margin-bottom: 16px;
+}
+
+.score-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* Result Card */
+.result-card {
+    text-align: center;
+    padding: 40px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 32px;
+}
+
+/* Answer Box (for results) */
+.answer-box {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.box-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.box-text {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
