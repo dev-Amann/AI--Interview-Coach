@@ -1,148 +1,136 @@
-# AI Interview Coach 🎯
+# AI Interview Coach v2.1🎯
 
-An intelligent, AI-powered interview practice application with multiple pages, analytics, PDF reports, and authentication. Built with Streamlit and powered by Groq/Gemini AI.
+An intelligent, AI-powered interview practice application designed to help you master your next interview. Built with a modern tech stack (React, Flask, MySQL) and powered by advanced LLMs (Groq Llama-3 & Google Gemini).
 
-![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
-![Streamlit](https://img.shields.io/badge/Streamlit-1.31+-red.svg)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
+![React](https://img.shields.io/badge/React-19.0-blue.svg)
+![Flask](https://img.shields.io/badge/Flask-3.0-green.svg)
+![Groq](https://img.shields.io/badge/AI-Groq-orange.svg)
+![License](https://img.shields.io/badge/License-MIT-purple.svg)
 
 ## ✨ Features
 
-### 🏠 Landing Page
-- **Modern UI**: Animated hero section with statistics and feature highlights.
-- **User Flow**: Clear call-to-action for immediate start.
+### 🤖 AI Chat Coach (New!)
+- **Conversational Interface**: Chat naturally with the AI Coach.
+- **Resume Context**: Upload your resume directly in chat. The AI analyzes it to ask tailored questions (Fresher vs Experienced).
+- **Strict Roleplay**: The AI stays in character as a professional interviewer.
 
-### 📝 Interview Page
-- **Resume Parsing**: Upload your PDF resume for personalized questions.
-- **Customizable Sessions**: Select from 12+ job roles, 3 categories (Technical, Behavioral, HR), and 3 difficulty levels.
-- **AI-Powered Questions**: Dynamic questions generated using Groq/Gemini models.
-- **Real-time Evaluation**: Instant feedback and scoring for every answer.
-- **Ideal Answers**: Learn from model answers provided for each question.
+### 🏠 Modern Dashboard
+- **Analytics**: Track your progress with visual charts and score trends.
+- **History**: View past sessions and download detailed PDF reports.
+- **Quick Actions**: Start new interviews or jump back into chat.
 
-### 📊 Analytics Dashboard
-- **Performance Overview**: Summary cards for quick insights.
-- **Visual Charts**: Score trends and skill distribution using Plotly.
-- **AI Recommendations**: Personalized tips to improve your interview skills.
+### � Mock Interview Session
+- **Role Specific**: Choose from 12+ job roles and custom difficulty levels.
+- **Real-time Feedback**: Get instant scoring (0-10) and feedback on every answer.
+- **Ideal Answers**: Learn from AI-generated "Model Answers".
 
-### 📄 Interview History
-- **Session Tracking**: View complete history of past interviews.
-- **Detailed Reviews**: Expandable views to see questions, your answers, scores, and feedback.
-- **PDF Reports**: Download professional reports of your sessions.
+### 🔐 Secure & Fast
+- **Authentication**: Powered by Clerk (Sign In/Up, Google Auth).
+- **Performance**: Fast backend response times with Flask & connection pooling.
 
-### 🔐 Authentication
-- **Secure Access**: Sign-in and Sign-up functionality.
-- **User Management**: Session-based user tracking with MySQL integration.
+---
 
 ## 🛠️ Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| **Frontend** | Streamlit 1.31+ |
-| **AI Models** | Groq (Llama-3.3-70b), Google Gemini |
-| **Data Viz** | Plotly |
-| **PDF** | ReportLab |
-| **Database** | MySQL |
-| **Authentication** | Custom Logic with MySQL |
+### Frontend (Client)
+- **Framework**: React 19 + Vite
+- **Styling**: TailwindCSS 4
+- **Auth**: Clerk
+- **Icons**: Lucide React
+- **HTTP**: Axios
 
-## 📋 Prerequisites
+### Backend (Server)
+- **Framework**: Flask
+- **AI Models**: Groq (Llama-3.3-70b), Google Gemini 1.5 Flash
+- **Database**: MySQL (Connector Python)
+- **PDF Processing**: pdfplumber (Parsing), ReportLab (Generation)
 
-- Python 3.8+
-- MySQL Server (for user and history data)
-- API Keys:
-  - [Groq API Key](https://console.groq.com/keys)
-  - [Google Gemini API Key](https://aistudio.google.com/app/apikey)
+---
 
 ## 📦 Installation
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/dev-Amann/AI--Interview-Coach.git
-   cd AI--Interview-Coach
-   ```
+### Prerequisites
+- Node.js (v18+)
+- Python (3.11+)
+- MySQL Server
 
-2. **Create virtual environment**:
-   ```bash
-   python -m venv venv
-   # Windows
-   venv\Scripts\activate
-   # macOS/Linux
-   source venv/bin/activate
-   ```
+### 1. Clone the Repository
+```bash
+git clone https://github.com/dev-Amann/AI--Interview-Coach.git
+cd AI_Interview_Coach
+```
 
-3. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 2. Backend Setup
+```bash
+cd server
+# Create virtual environment
+python -m venv venv
+# Activate (Windows)
+..\venv\Scripts\activate
+# Activate (Mac/Linux)
+source ../venv/bin/activate
 
-4. **Configure environment variables**:
-   Create a `.env` file in the root directory:
-   ```env
-   # AI API Keys
-   GROQ_API_KEY=your_groq_key
-   GEMINI_API_KEY=your_gemini_key
-   
-   # MySQL Database Configuration
-   MYSQL_HOST=localhost
-   MYSQL_USER=root
-   MYSQL_PASSWORD=your_password
-   MYSQL_DATABASE=interview_coach
-   ```
+# Install dependencies
+pip install -r requirements.txt
+```
 
-5. **Setup Database**:
-   Import the `init.sql` file into your MySQL database or run the query:
-   ```sql
-   CREATE DATABASE interview_coach;
-   -- Run contents of init.sql
-   ```
+**Create `.env` file in `server/` root:**
+```env
+GROQ_API_KEY=your_groq_key
+GEMINI_API_KEY=your_gemini_key
+
+MYSQL_HOST=localhost
+MYSQL_USER=root
+MYSQL_PASSWORD=your_password
+MYSQL_DATABASE=interview_coach
+```
+
+### 3. Frontend Setup
+```bash
+cd ../client
+# Install dependencies
+npm install
+
+# Create .env.local in client/ root
+echo "VITE_CLERK_PUBLISHABLE_KEY=your_clerk_key" > .env.local
+```
+
+### 4. Database Initialization
+Import the `init.sql` schema into your MySQL database or run the migration scripts provided in `services/database.py`.
+
+---
 
 ## ▶️ Usage
 
-1. **Run the application**:
+1. **Start Backend**:
    ```bash
-   streamlit run Home.py
+   # From root
+   python server/app.py
+   # Runs on http://localhost:5000
    ```
 
-2. **Open in browser**: App usually runs at `http://localhost:8501`.
+2. **Start Frontend**:
+   ```bash
+   # From client/
+   npm run dev
+   # Runs on http://localhost:5173
+   ```
 
-3. **Workflow**:
-   - **Sign Up/In**: Create an account to save your progress.
-   - **Start Interview**: Upload resume -> Configure session -> Generate questions.
-   - **Practice**: Answer questions and get instant feedback.
-   - **Review**: Check your Dashboard for analytics and History for past sessions.
+3. **Open App**: Navigate to `http://localhost:5173` in your browser.
 
-## 📂 Project Structure
-
-```
-AI_Interview_Coach/
-├── Home.py                      # Main landing page
-├── assets/                      # CSS and images
-├── pages/
-│   ├── Sign_In.py               # Authentication page
-│   ├── Dashboard.py             # User analytics
-│   ├── Start_Interview.py       # Main interview interface
-│   └── History.py               # Session history & reports
-├── services/
-│   ├── ai_engine.py             # LLM integration (Groq/Gemini)
-│   ├── auth.py                  # Authentication logic
-│   ├── components.py            # Reusable UI components
-│   ├── database.py              # MySQL database interactions
-│   ├── interview_manager.py     # Interview session logic
-│   ├── pdf_generator.py         # PDF report generation
-│   └── resume_parser.py         # PDF resume parsing
-├── init.sql                     # Database schema
-├── requirements.txt             # Python dependencies
-└── README.md                    # Project documentation
-```
+---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit pull requests.
+Contributions are welcome!
+1. Fork the repo.
+2. Create a feature branch (`git checkout -b feature/NewFeature`).
+3. Commit your changes.
+4. Push to the branch.
+5. Open a Pull Request.
+
+---
 
 ## 📄 License
 
 This project is open-source under the [MIT License](LICENSE).
-
-## 🙏 Acknowledgments
-
-- Powered by [Groq](https://groq.com) and [Google Gemini](https://ai.google.dev)
-- Built with [Streamlit](https://streamlit.io)

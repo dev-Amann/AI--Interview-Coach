@@ -6,6 +6,29 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# ******************************************************
+# [Condition in Prompt] - SYSTEM PROMPT DEFINITION
+# ******************************************************
+SYSTEM_PROMPT = """
+You are an AI Interview Coach.
+
+You must answer ONLY interview-related questions such as:
+- Technical interview questions
+- HR and behavioral interview questions
+- Resume or project explanation for interviews
+- Mock interview practice
+- Career guidance related to interviews
+
+If the user asks any question that is NOT related to interview preparation,
+do NOT answer it.
+
+Instead, respond only with:
+"I am designed to help only with interview-related questions. Please ask an interview-related question."
+
+Follow this rule strictly.
+"""
+# ******************************************************
+
 class AIEngine:
     def __init__(self):
         self.groq_api_key = os.getenv("GROQ_API_KEY")
@@ -38,6 +61,7 @@ class AIEngine:
             "HR": "Generate HR interview questions about career goals, salary expectations, company culture fit, strengths/weaknesses, and work preferences."
         }
         
+        # Original Task Prompt
         prompt = f"""
         You are an expert interviewer conducting a {category.lower()} interview.
         
@@ -62,10 +86,18 @@ class AIEngine:
         
         if self.groq_client:
             try:
+                # ******************************************************
+                # [Condition in Prompt] - Adding System Message
+                # ******************************************************
+                messages = [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt}
+                ]
+                
                 chat_completion = self.groq_client.chat.completions.create(
-                    messages=[{"role": "user", "content": prompt}],
+                    messages=messages,
                     model="llama-3.3-70b-versatile",
-                    temperature=0.7
+                    temperature=0.7        #temperature for question generation
                 )
                 content = chat_completion.choices[0].message.content
                 return self._clean_and_parse_json(content)
@@ -74,9 +106,11 @@ class AIEngine:
         
         if self.gemini_client:
             try:
+                # Prepend System Prompt for Gemini
+                full_prompt = f"{SYSTEM_PROMPT}\n\n{prompt}"
                 response = self.gemini_client.models.generate_content(
                     model='gemini-1.5-flash',
-                    contents=prompt
+                    contents=full_prompt
                 )
                 return self._clean_and_parse_json(response.text)
             except Exception as e:
@@ -85,6 +119,7 @@ class AIEngine:
         return ["Could not generate questions. Please check your API keys.", "", "", "", ""]
 
     def evaluate_answer(self, question, answer, job_role):
+        # Original Task Prompt
         prompt = f"""
         Act as an experienced Interviewer for a {job_role} position.
         
@@ -109,10 +144,18 @@ class AIEngine:
 
         if self.groq_client:
             try:
+                # ******************************************************
+                # [Condition in Prompt] - Adding System Message
+                # ******************************************************
+                messages = [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt}
+                ]
+                
                 chat_completion = self.groq_client.chat.completions.create(
-                    messages=[{"role": "user", "content": prompt}],
+                    messages=messages,
                     model="llama-3.3-70b-versatile",
-                    temperature=0.5
+                    temperature=0.5   #temperture for answer evalution
                 )
                 content = chat_completion.choices[0].message.content
                 return self._clean_and_parse_json(content)
@@ -121,9 +164,11 @@ class AIEngine:
         
         if self.gemini_client:
             try:
+                # Prepend System Prompt for Gemini
+                full_prompt = f"{SYSTEM_PROMPT}\n\n{prompt}"
                 response = self.gemini_client.models.generate_content(
                     model='gemini-1.5-flash',
-                    contents=prompt
+                    contents=full_prompt
                 )
                 return self._clean_and_parse_json(response.text)
             except Exception as e:
@@ -153,10 +198,18 @@ class AIEngine:
         
         if self.groq_client:
             try:
+                # ******************************************************
+                # [Condition in Prompt] - Adding System Message
+                # ******************************************************
+                messages = [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt}
+                ]
+                
                 chat_completion = self.groq_client.chat.completions.create(
-                    messages=[{"role": "user", "content": prompt}],
+                    messages=messages,
                     model="llama-3.3-70b-versatile",
-                    temperature=0.5
+                    temperature=0.5 #temperture for skill analysis
                 )
                 content = chat_completion.choices[0].message.content
                 return self._clean_and_parse_json(content)
@@ -172,6 +225,45 @@ class AIEngine:
                 "Review core concepts in weaker areas"
             ]
         }
+
+    def chat(self, messages):
+
+        system_message = {"role": "system", "content": SYSTEM_PROMPT}
+        
+        
+        final_messages = [system_message] + messages
+        
+        if self.groq_client:
+            try:
+                chat_completion = self.groq_client.chat.completions.create(
+                    messages=final_messages,
+                    model="llama-3.3-70b-versatile",
+                    temperature=0.7 
+                )
+                return chat_completion.choices[0].message.content
+            except Exception as e:
+                print(f"Groq Chat Error: {e}")
+                return "I apologize, but I am encountering technical difficulties. Please try again."
+
+        if self.gemini_client:
+            try:
+ 
+                full_prompt = f"{SYSTEM_PROMPT}\n\n"
+                for msg in messages:
+                    role = "User" if msg['role'] == 'user' else "AI"
+                    full_prompt += f"{role}: {msg['content']}\n"
+                full_prompt += "AI:"
+                
+                response = self.gemini_client.models.generate_content(
+                    model='gemini-1.5-flash',
+                    contents=full_prompt
+                )
+                return response.text
+            except Exception as e:
+                print(f"Gemini Chat Error: {e}")
+                return "I apologize, but I am encountering technical difficulties. Please try again."
+        
+        return "AI Service Unavailable."
 
     def _clean_and_parse_json(self, text):
         try:
