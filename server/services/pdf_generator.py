@@ -3,7 +3,7 @@ from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY, TA_RIGHT
 from io import BytesIO
 from datetime import datetime
 
@@ -13,122 +13,146 @@ def generate_interview_report(report_data):
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        rightMargin=50,
-        leftMargin=50,
-        topMargin=50,
-        bottomMargin=50
+        rightMargin=40,
+        leftMargin=40,
+        topMargin=40,
+        bottomMargin=40
     )
     
     styles = getSampleStyleSheet()
     
+    # Define primary colors (Modern Indigo/Violet palette)
+    PRIMARY = colors.HexColor('#4F46E5')     # Indigo 600
+    SECONDARY = colors.HexColor('#7C3AED')   # Violet 600
+    SUCCESS = colors.HexColor('#059669')     # Emerald 600
+    WARNING = colors.HexColor('#D97706')     # Amber 600
+    DANGER = colors.HexColor('#DC2626')      # Red 600
+    TEXT_MAIN = colors.HexColor('#111827')   # Gray 900
+    TEXT_MUTED = colors.HexColor('#6B7280')  # Gray 500
+    BG_LIGHT = colors.HexColor('#F9FAFB')    # Gray 50
+    BORDER = colors.HexColor('#E5E7EB')      # Gray 200
+
+    # Custom Styles
     title_style = ParagraphStyle(
-        'CustomTitle',
+        'PremiumTitle',
         parent=styles['Heading1'],
-        fontSize=24,
-        spaceAfter=20,
+        fontSize=28,
+        textColor=PRIMARY,
         alignment=TA_CENTER,
-        textColor=colors.HexColor('#6366f1')
-    )
-    
-    heading_style = ParagraphStyle(
-        'CustomHeading',
-        parent=styles['Heading2'],
-        fontSize=14,
         spaceAfter=10,
-        spaceBefore=15,
-        textColor=colors.HexColor('#8b5cf6')
+        fontName='Helvetica-Bold'
     )
     
-    subheading_style = ParagraphStyle(
-        'CustomSubheading',
-        parent=styles['Heading3'],
+    subtitle_style = ParagraphStyle(
+        'PremiumSubtitle',
+        parent=styles['Normal'],
         fontSize=12,
-        spaceAfter=8,
-        textColor=colors.HexColor('#334155')
+        textColor=TEXT_MUTED,
+        alignment=TA_CENTER,
+        spaceAfter=30
     )
     
-    body_style = ParagraphStyle(
-        'CustomBody',
+    card_label_style = ParagraphStyle(
+        'CardLabel',
+        fontSize=9,
+        textColor=TEXT_MUTED,
+        fontName='Helvetica-Bold',
+        alignment=TA_CENTER,
+        spaceAfter=2
+    )
+    
+    card_value_style = ParagraphStyle(
+        'CardValue',
+        fontSize=12,
+        textColor=TEXT_MAIN,
+        fontName='Helvetica-Bold',
+        alignment=TA_CENTER
+    )
+    
+    section_title_style = ParagraphStyle(
+        'SectionTitle',
+        parent=styles['Heading2'],
+        fontSize=16,
+        textColor=TEXT_MAIN,
+        spaceBefore=25,
+        spaceAfter=15,
+        borderPadding=5,
+        fontName='Helvetica-Bold'
+    )
+    
+    question_style = ParagraphStyle(
+        'Question',
+        parent=styles['Normal'],
+        fontSize=11,
+        textColor=TEXT_MAIN,
+        fontName='Helvetica-Bold',
+        spaceAfter=6,
+        leading=14
+    )
+    
+    answer_box_style = ParagraphStyle(
+        'AnswerBox',
         parent=styles['Normal'],
         fontSize=10,
-        spaceAfter=8,
-        alignment=TA_JUSTIFY,
-        textColor=colors.HexColor('#475569')
+        textColor=colors.HexColor('#374151'),
+        leftIndent=10,
+        rightIndent=10,
+        spaceBefore=5,
+        spaceAfter=10,
+        leading=14
     )
     
-    small_style = ParagraphStyle(
-        'SmallText',
+    feedback_style = ParagraphStyle(
+        'Feedback',
         parent=styles['Normal'],
-        fontSize=9,
-        textColor=colors.HexColor('#64748b')
+        fontSize=10,
+        textColor=TEXT_MAIN,
+        leftIndent=10,
+        leading=14
     )
-    
+
     elements = []
     
+    # 1. HEADER
     elements.append(Paragraph("🎯 AI Interview Coach", title_style))
-    elements.append(Paragraph("Interview Performance Report", ParagraphStyle(
-        'Subtitle',
-        parent=styles['Normal'],
-        fontSize=14,
-        alignment=TA_CENTER,
-        textColor=colors.HexColor('#94a3b8'),
-        spaceAfter=30
-    )))
+    elements.append(Paragraph(f"Performance Report • {datetime.now().strftime('%B %d, %Y')}", subtitle_style))
     
-    elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#e2e8f0')))
-    elements.append(Spacer(1, 20))
-    
-    job_role = report_data.get('job_role', 'N/A')
-    category = report_data.get('category', 'Technical')
-    difficulty = report_data.get('difficulty', 'Medium')
+    # 2. METRICS CARDS (Summary Section)
     avg_score = report_data.get('avg_score', 0)
-    qualified = report_data.get('qualified', False)
+    score_color = DANGER if avg_score < 5 else WARNING if avg_score < 7 else SUCCESS
     
-    info_data = [
-        ['Job Role:', job_role, 'Date:', datetime.now().strftime('%B %d, %Y')],
-        ['Category:', category, 'Difficulty:', difficulty],
-        ['Avg Score:', f"{avg_score:.1f}/10", 'Status:', '✅ QUALIFIED' if qualified else '❌ NEEDS PRACTICE']
+    metric_cards_data = [
+        [
+            Paragraph("ROLE", card_label_style),
+            Paragraph("CATEGORY", card_label_style),
+            Paragraph("SCORE", card_label_style),
+            Paragraph("STATUS", card_label_style)
+        ],
+        [
+            Paragraph(report_data.get('job_role', 'N/A'), card_value_style),
+            Paragraph(report_data.get('category', 'Technical'), card_value_style),
+            Paragraph(f"<font color={score_color.hexval()}>{avg_score:.1f}/10</font>", card_value_style),
+            Paragraph(
+                "PASSED" if report_data.get('qualified', False) else "PRACTICE", 
+                ParagraphStyle('status', parent=card_value_style, textColor=score_color)
+            )
+        ]
     ]
     
-    info_table = Table(info_data, colWidths=[80, 150, 80, 150])
-    info_table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#64748b')),
-        ('TEXTCOLOR', (2, 0), (2, -1), colors.HexColor('#64748b')),
-        ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#1e293b')),
-        ('TEXTCOLOR', (3, 0), (3, -1), colors.HexColor('#1e293b')),
-        ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
-        ('FONTNAME', (3, 0), (3, -1), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ('TOPPADDING', (0, 0), (-1, -1), 8),
+    metrics_table = Table(metric_cards_data, colWidths=[130, 130, 130, 130])
+    metrics_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), BG_LIGHT),
+        ('BOX', (0, 0), (-1, -1), 1, BORDER),
+        ('GRID', (0, 0), (-1, -1), 0.5, BORDER),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
     ]))
+    elements.append(metrics_table)
+    elements.append(Spacer(1, 25))
     
-    elements.append(info_table)
-    elements.append(Spacer(1, 20))
-    
-    score_color = colors.HexColor('#22c55e') if avg_score >= 7 else colors.HexColor('#eab308') if avg_score >= 5 else colors.HexColor('#ef4444')
-    
-    score_data = [
-        [Paragraph(f"<font size='24' color='#{score_color.hexval()[2:]}'><b>{avg_score:.1f}</b></font>", 
-                   ParagraphStyle('score', alignment=TA_CENTER))],
-        [Paragraph("Overall Score out of 10", ParagraphStyle('label', alignment=TA_CENTER, textColor=colors.HexColor('#64748b')))]
-    ]
-    
-    score_table = Table(score_data, colWidths=[200])
-    score_table.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8fafc')),
-        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#e2e8f0')),
-        ('TOPPADDING', (0, 0), (-1, -1), 15),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
-    ]))
-    
-    elements.append(score_table)
-    elements.append(Spacer(1, 30))
-    
-    elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#e2e8f0')))
-    elements.append(Paragraph("📋 Question-by-Question Analysis", heading_style))
+    # 3. QUESTION ANALYSIS
+    elements.append(Paragraph("Detailed Question Analysis", section_title_style))
     
     questions = report_data.get('questions', [])
     answers = report_data.get('answers', {})
@@ -138,72 +162,84 @@ def generate_interview_report(report_data):
     
     for i, question in enumerate(questions):
         score = scores[i] if i < len(scores) else 0
-        answer = answers.get(i, 'No answer provided')
-        feedback = feedback_list[i] if i < len(feedback_list) else 'N/A'
-        ideal = ideal_answers_list[i] if i < len(ideal_answers_list) else 'N/A'
+        ans_text = answers.get(i, 'No answer provided')
+        fb_text = feedback_list[i] if i < len(feedback_list) else 'N/A'
+        ideal_text = ideal_answers_list[i] if i < len(ideal_answers_list) else 'N/A'
         
-        score_color_hex = '#22c55e' if score >= 7 else '#eab308' if score >= 5 else '#ef4444'
+        q_score_color = DANGER if score < 5 else WARNING if score < 7 else SUCCESS
         
-        elements.append(Spacer(1, 15))
+        # Question Header Card
+        q_header_data = [[
+            Paragraph(f"QUESTION {i+1}", ParagraphStyle('qh', fontSize=9, fontName='Helvetica-Bold', textColor=PRIMARY)),
+            Paragraph(f"SCORE: {score}/10", ParagraphStyle('qs', fontSize=9, fontName='Helvetica-Bold', textColor=q_score_color, alignment=TA_RIGHT))
+        ]]
+        q_header_table = Table(q_header_data, colWidths=[260, 260])
+        q_header_table.setStyle(TableStyle([
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ]))
+        elements.append(q_header_table)
         
-        q_header = f"<b>Question {i+1}</b> <font color='{score_color_hex}'>[Score: {score}/10]</font>"
-        elements.append(Paragraph(q_header, subheading_style))
+        # The Question itself
+        elements.append(Paragraph(question, question_style))
         
-        elements.append(Paragraph(f"<i>{question}</i>", body_style))
-        elements.append(Spacer(1, 5))
+        # Response & Feedback Card
+        response_data = [
+            [Paragraph("<b>YOUR RESPONSE:</b>", ParagraphStyle('rl', fontSize=8, textColor=TEXT_MUTED))],
+            [Paragraph(str(ans_text), answer_box_style)],
+            [Paragraph("<b>COACH FEEDBACK:</b>", ParagraphStyle('rl', fontSize=8, textColor=TEXT_MUTED))],
+            [Paragraph(fb_text, feedback_style)],
+            [Spacer(1, 10)],
+            [Paragraph("<b>💡 IDEAL ANSWER:</b>", ParagraphStyle('rl', fontSize=8, textColor=SUCCESS))],
+            [Paragraph(f'<font color="{SUCCESS.hexval()}">{ideal_text}</font>', ParagraphStyle('ideal', parent=answer_box_style, backColor=colors.HexColor('#ECFDF5')))]
+        ]
         
-        elements.append(Paragraph("<b>Your Answer:</b>", small_style))
-        elements.append(Paragraph(str(answer), body_style))
+        response_table = Table(response_data, colWidths=[520])
+        response_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.white),
+            ('BOX', (0, 0), (-1, -1), 0.5, BORDER),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ('LEFTPADDING', (0, 0), (-1, -1), 15),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 15),
+        ]))
         
-        elements.append(Paragraph("<b>Feedback:</b>", small_style))
-        elements.append(Paragraph(feedback, body_style))
-        
-        elements.append(Paragraph("<b>💡 Ideal Answer:</b>", small_style))
-        elements.append(Paragraph(ideal, ParagraphStyle(
-            'IdealAnswer',
-            parent=body_style,
-            textColor=colors.HexColor('#059669'),
-            backColor=colors.HexColor('#ecfdf5'),
-            borderPadding=8
-        )))
-        
-        elements.append(Spacer(1, 10))
-        elements.append(HRFlowable(width="80%", thickness=0.5, color=colors.HexColor('#e2e8f0')))
-    
-    elements.append(Spacer(1, 30))
-    elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#e2e8f0')))
-    elements.append(Paragraph("💡 Recommendations", heading_style))
+        elements.append(response_table)
+        elements.append(Spacer(1, 20))
+
+    # 4. RECOMMENDATIONS
+    elements.append(Paragraph("Expert Recommendations", section_title_style))
+    rec_box_data = []
     
     if avg_score < 5:
-        recommendations = [
-            "📚 Focus on strengthening fundamental concepts",
-            "🎯 Practice with more questions at easier difficulty first",
-            "✍️ Write out detailed answers to reinforce learning"
-        ]
+        recs = ["Focus on fundamental concepts and definitions.", "Practice coding daily on basic problem sets.", "Review the core requirements of the job role."]
     elif avg_score < 7:
-        recommendations = [
-            "✨ Good foundation! Add more specific examples from experience",
-            "🔍 Dive deeper into advanced topics",
-            "💬 Practice articulating your thoughts clearly"
-        ]
+        recs = ["Elaborate more on your past projects as examples.", "Prepare better for behavioral scenarios (STAR method).", "Try explaining technical concepts to a non-technical person."]
     else:
-        recommendations = [
-            "🌟 Excellent performance! Keep up the great work",
-            "🚀 Challenge yourself with harder difficulty levels",
-            "🎤 Consider mock interviews for additional practice"
-        ]
+        recs = ["Excellent foundation! Aim for senior-level depth in answers.", "Keep up with the latest trends in the industry.", "Polish your delivery and confidence further."]
+        
+    for rec in recs:
+        rec_box_data.append([Paragraph(f"• {rec}", ParagraphStyle('rec', fontSize=10, textColor=TEXT_MAIN, leading=14))])
+        
+    rec_table = Table(rec_box_data, colWidths=[520])
+    rec_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), BG_LIGHT),
+        ('BOX', (0, 0), (-1, -1), 0.5, BORDER),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('LEFTPADDING', (0, 0), (-1, -1), 15),
+    ]))
+    elements.append(rec_table)
     
-    for rec in recommendations:
-        elements.append(Paragraph(f"• {rec}", body_style))
-    
-    elements.append(Spacer(1, 30))
-    elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#e2e8f0')))
+    # 5. FOOTER
+    elements.append(Spacer(1, 40))
+    elements.append(HRFlowable(width="100%", thickness=1, color=BORDER))
     elements.append(Spacer(1, 10))
     elements.append(Paragraph(
-        f"Generated by AI Interview Coach on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}",
-        ParagraphStyle('Footer', alignment=TA_CENTER, fontSize=8, textColor=colors.HexColor('#94a3b8'))
+        f"Automated Assessment Report • Generated by AI Interview Coach • {datetime.now().strftime('%d %b %Y %H:%M')}",
+        ParagraphStyle('Footer', fontSize=8, textColor=TEXT_MUTED, alignment=TA_CENTER)
     ))
-    
+
     doc.build(elements)
     
     pdf_bytes = buffer.getvalue()

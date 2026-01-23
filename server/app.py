@@ -24,6 +24,13 @@ app.register_blueprint(user_bp, url_prefix='/api/user')
 def health_check():
     return jsonify({"status": "healthy", "service": "AI Interview Coach API"})
 
+@app.errorhandler(Exception)
+def handle_exception(e):
+    import traceback
+    print("!!! GLOBAL ERROR CAUGHT !!!")
+    traceback.print_exc()
+    return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     port = int(os.getenv("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=True)

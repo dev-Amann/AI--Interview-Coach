@@ -8,3 +8,4 @@ dist
 __pycache__/
 *.log
 *.tmp
+node_modules

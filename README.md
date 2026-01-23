@@ -1,136 +1,92 @@
-# AI Interview Coach v2.1🎯
+# AI Interview Coach v2.2🎯
 
-An intelligent, AI-powered interview practice application designed to help you master your next interview. Built with a modern tech stack (React, Flask, MySQL) and powered by advanced LLMs (Groq Llama-3 & Google Gemini).
+An intelligent, end-to-end platform designed to help job seekers master their interview skills through personalized AI-driven simulation, resume analysis, and premium performance reporting.
 
-![React](https://img.shields.io/badge/React-19.0-blue.svg)
-![Flask](https://img.shields.io/badge/Flask-3.0-green.svg)
-![Groq](https://img.shields.io/badge/AI-Groq-orange.svg)
-![License](https://img.shields.io/badge/License-MIT-purple.svg)
+## 🚀 Key Features
 
-## ✨ Features
+### 1. Personalized AI Coach Chat
+- **Intelligent Resume Parsing**: Supports PDF and Image (JPG/PNG) uploads with high-accuracy OCR.
+- **Dynamic Personalization**: Automatically extracts the candidate's name and tailors the conversation.
+- **Context-Aware Dialogue**: Powered by Groq (Llama 3.3) and Gemini (Flash), providing human-like interview guidance.
 
-### 🤖 AI Chat Coach (New!)
-- **Conversational Interface**: Chat naturally with the AI Coach.
-- **Resume Context**: Upload your resume directly in chat. The AI analyzes it to ask tailored questions (Fresher vs Experienced).
-- **Strict Roleplay**: The AI stays in character as a professional interviewer.
+### 2. Structured Mock Interviews
+- **Role-Specific Scenarios**: Generate 5 targeted questions based on the job role, category (Technical/HR/Behavioral), and difficulty level.
+- **Real-time Feedback**: Instant scoring and constructive feedback for every answer using advanced LLM evaluation.
+- **Progress Tracking**: Visual progress indicators and session stats.
 
-### 🏠 Modern Dashboard
-- **Analytics**: Track your progress with visual charts and score trends.
-- **History**: View past sessions and download detailed PDF reports.
-- **Quick Actions**: Start new interviews or jump back into chat.
-
-### � Mock Interview Session
-- **Role Specific**: Choose from 12+ job roles and custom difficulty levels.
-- **Real-time Feedback**: Get instant scoring (0-10) and feedback on every answer.
-- **Ideal Answers**: Learn from AI-generated "Model Answers".
-
-### 🔐 Secure & Fast
-- **Authentication**: Powered by Clerk (Sign In/Up, Google Auth).
-- **Performance**: Fast backend response times with Flask & connection pooling.
-
----
+### 3. Premium Performance Reports
+- **Executive Summary**: Metric cards for overall score, qualification status, and role metadata.
+- **Deep-Dive Analysis**: Detailed question-by-question breakdown with score, user response, coach feedback, and an "Ideal Answer" comparison.
+- **Aesthetic PDF Layout**: Professional, card-based PDF design ready for download and review.
 
 ## 🛠️ Tech Stack
 
-### Frontend (Client)
-- **Framework**: React 19 + Vite
-- **Styling**: TailwindCSS 4
-- **Auth**: Clerk
-- **Icons**: Lucide React
-- **HTTP**: Axios
+- **Frontend**: React.js, Tailwind CSS, Vite, Lucide Icons.
+- **Backend**: Python, Flask, Flask-CORS.
+- **Database**: MySQL (Session & User Management).
+- **Authentication**: Clerk (Enterprise-grade auth).
+- **AI/LLM Engine**:
+  - **Groq (Llama 3.3)**: Primary engine for high-speed chat and evaluations.
+  - **Google Gemini (Flash)**: High-performance OCR and multimodal resume parsing.
+- **PDF Core**: ReportLab (Custom premium layouts).
 
-### Backend (Server)
-- **Framework**: Flask
-- **AI Models**: Groq (Llama-3.3-70b), Google Gemini 1.5 Flash
-- **Database**: MySQL (Connector Python)
-- **PDF Processing**: pdfplumber (Parsing), ReportLab (Generation)
+## 📋 Prerequisites
 
----
-
-## 📦 Installation
-
-### Prerequisites
-- Node.js (v18+)
-- Python (3.11+)
+- Python 3.8+
+- Node.js 18+
 - MySQL Server
+- Clerk API Keys
+- Groq & Gemini API Keys
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/dev-Amann/AI--Interview-Coach.git
-cd AI_Interview_Coach
+## ⚙️ Installation & Setup
+
+### 1. Create Environment Variables
+Create a `.env` file in the `server` directory:
+```env
+GROQ_API_KEY=your_key
+GEMINI_API_KEY=your_key
+MYSQL_HOST=localhost
+MYSQL_USER=your_user
+MYSQL_PASSWORD=your_password
+MYSQL_DATABASE=interview_coach
 ```
 
 ### 2. Backend Setup
 ```bash
 cd server
-# Create virtual environment
 python -m venv venv
-# Activate (Windows)
-..\venv\Scripts\activate
-# Activate (Mac/Linux)
-source ../venv/bin/activate
-
-# Install dependencies
+.\venv\Scripts\activate  # Windows
 pip install -r requirements.txt
-```
-
-**Create `.env` file in `server/` root:**
-```env
-GROQ_API_KEY=your_groq_key
-GEMINI_API_KEY=your_gemini_key
-
-MYSQL_HOST=localhost
-MYSQL_USER=root
-MYSQL_PASSWORD=your_password
-MYSQL_DATABASE=interview_coach
+python app.py
 ```
 
 ### 3. Frontend Setup
 ```bash
-cd ../client
-# Install dependencies
+cd client
 npm install
-
-# Create .env.local in client/ root
-echo "VITE_CLERK_PUBLISHABLE_KEY=your_clerk_key" > .env.local
+npm run dev
 ```
 
-### 4. Database Initialization
-Import the `init.sql` schema into your MySQL database or run the migration scripts provided in `services/database.py`.
+## 🏗️ Architecture
+
+```mermaid
+graph TD
+    User[Candidate] --> Frontend[React Frontend]
+    Frontend --> Auth[Clerk Auth]
+    Frontend --> API[Flask API]
+    API --> DB[(MySQL DB)]
+    API --> AI[AI Engine]
+    AI --> Groq[Groq Llama 3.3]
+    AI --> Gemini[Gemini Flash OCR]
+    API --> PDF[PDF Generator]
+    PDF --> User
+```
+
+## 🌟 Recent Updates
+- ✅ **Personalized Greeting**: AI now addresses candidates by name extracted from resumes.
+- ✅ **Gemini 1.5 Integration**: Optimized OCR using `gemini-flash-latest` for faster processing.
+- ✅ **Premium PDF Redesign**: Modern card-based reporting with visual metrics.
+- ✅ **API Stability**: Enhanced error handling for high-concurrency LLM calls.
 
 ---
-
-## ▶️ Usage
-
-1. **Start Backend**:
-   ```bash
-   # From root
-   python server/app.py
-   # Runs on http://localhost:5000
-   ```
-
-2. **Start Frontend**:
-   ```bash
-   # From client/
-   npm run dev
-   # Runs on http://localhost:5173
-   ```
-
-3. **Open App**: Navigate to `http://localhost:5173` in your browser.
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome!
-1. Fork the repo.
-2. Create a feature branch (`git checkout -b feature/NewFeature`).
-3. Commit your changes.
-4. Push to the branch.
-5. Open a Pull Request.
-
----
-
-## 📄 License
-
-This project is open-source under the [MIT License](LICENSE).
+Developed as part of the Infosys SpringBoard Internship Project.

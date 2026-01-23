@@ -58,7 +58,10 @@ const ChatInterview = () => {
 
         } catch (error) {
             console.error("Upload Error:", error);
-            setMessages(prev => [...prev, { role: 'assistant', content: "Failed to upload resume. Please try again." }]);
+            if (error.response) {
+                console.error("Error Detail:", error.response.data);
+            }
+            setMessages(prev => [...prev, { role: 'assistant', content: error.response?.data?.error || "Failed to upload resume. Please try again." }]);
         } finally {
             setIsLoading(false);
             e.target.value = null; // Reset input
@@ -183,14 +186,14 @@ const ChatInterview = () => {
                         type="file"
                         ref={fileInputRef}
                         onChange={handleFileUpload}
-                        accept=".pdf"
+                        accept=".pdf,.jpg,.jpeg,.png"
                         className="hidden"
                     />
                     <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isLoading}
                         className="p-3 bg-gray-100 text-gray-500 rounded-xl hover:bg-gray-200 transition-colors"
-                        title="Upload Resume (PDF)"
+                        title="Upload Resume (PDF, JPG, PNG)"
                     >
                         <Paperclip className="w-5 h-5" />
                     </button>

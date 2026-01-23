@@ -17,8 +17,8 @@ def start_interview():
         
         if 'resume_file' in request.files:
             file = request.files['resume_file']
-            from services.resume_parser import extract_text_from_pdf
-            resume_text = extract_text_from_pdf(file)
+            from services.resume_parser import extract_text
+            resume_text = extract_text(file)
         else:
             # Fallback to text if provided in form data
             resume_text = request.form.get('resume_text', '')
@@ -28,10 +28,12 @@ def start_interview():
             
         ai = AIEngine()
         questions = ai.generate_questions(resume_text, job_role, category, difficulty)
+        user_name = ai.extract_name(resume_text)
         
-        # In a real app, we might create a session ID here, but for now we follow the stateless flow 
-        # where frontend manages the active session state until save.
-        return jsonify({"questions": questions})
+        return jsonify({
+            "questions": questions,
+            "user_name": user_name
+        })
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -163,25 +165,42 @@ def chat_interview():
 @interview_bp.route('/chat/resume', methods=['POST'])
 def chat_resume_upload():
     try:
+        print("DEBUG: chat_resume_upload called")
         if 'resume' not in request.files:
+            print("DEBUG: No 'resume' key in request.files")
             return jsonify({"error": "No file uploaded"}), 400
             
         file = request.files['resume']
+        print(f"DEBUG: File received: {file.filename}")
+        
         if file.filename == '':
+            print("DEBUG: Empty filename")
             return jsonify({"error": "No selected file"}), 400
             
-        from services.resume_parser import extract_text_from_pdf
-        resume_text = extract_text_from_pdf(file)
+        from services.resume_parser import extract_text
+        print("DEBUG: Calling extract_text...")
+        resume_text = extract_text(file)
+        print(f"DEBUG: extract_text returned {len(resume_text)} characters")
         
+        if resume_text.startswith("Error:"):
+            print(f"DEBUG: extract_text returned error: {resume_text}")
+            return jsonify({"error": resume_text}), 400
+            
+        ai = AIEngine()
+        user_name = ai.extract_name(resume_text)
+        print(f"DEBUG: Extracted user name: {user_name}")
+
         # Prepare context prompt for the AI
         context_message = f"""
-        [SYSTEM: The candidate has uploaded a resume. Resume Content:
+        [SYSTEM: The candidate has uploaded a resume. 
+        Candidate Name: {user_name}
+        Resume Content:
         {resume_text[:4000]} 
         
         End of Resume]
         
         INSTRUCTIONS:
-        1. Acknowledge the resume.
+        1. Greet the candidate by name (e.g., "Hello {user_name}!").
         2. Ask the candidate if they are a Fresher or Experienced.
         3. Ask how many questions they would like to practice.
         4. Do NOT start the interview yet. Wait for their preferences.
@@ -191,8 +210,11 @@ def chat_resume_upload():
         8. Ask question one by one 
         """
         
-        return jsonify({"context": context_message, "preview": "Resume uploaded successfully."})
+        print("DEBUG: Returning success context")
+        return jsonify({"context": context_message, "preview": f"Resume uploaded successfully. Hello {user_name}!"})
         
     except Exception as e:
-        print(f"Resume Upload Error: {e}")
+        import traceback
+        print(f"CRITICAL ERROR in chat_resume_upload: {e}")
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500

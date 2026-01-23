@@ -36,6 +36,7 @@ const Setup = () => {
             navigate('/interview', {
                 state: {
                     questions: response.data.questions,
+                    user_name: response.data.user_name,
                     config: formData
                 }
             });
@@ -118,13 +119,13 @@ const Setup = () => {
                                                 name="file-upload"
                                                 type="file"
                                                 className="sr-only"
-                                                accept=".pdf"
+                                                accept=".pdf,.jpg,.jpeg,.png"
                                                 onChange={(e) => setFormData({ ...formData, resumeFile: e.target.files[0] })}
                                             />
                                         </label>
                                         <p className="pl-1">or drag and drop</p>
                                     </div>
-                                    <p className="text-xs text-gray-500">PDF up to 10MB</p>
+                                    <p className="text-xs text-gray-500">PDF, JPG, or PNG up to 10MB</p>
                                     {formData.resumeFile && (
                                         <div className="flex items-center gap-2 text-sm text-green-600 justify-center mt-2 bg-green-50 py-1 px-3 rounded-full">
                                             <FileText className="w-4 h-4" />

@@ -6,5 +6,6 @@ google-genai
 groq
 pdfplumber
 reportlab
-plotly
 bcrypt
+watchdog
+Pillow

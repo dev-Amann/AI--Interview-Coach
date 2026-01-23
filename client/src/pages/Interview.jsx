@@ -6,7 +6,7 @@ import { Mic, Send, AlertCircle, CheckCircle, ArrowRight, Loader2 } from 'lucide
 const Interview = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { questions, config } = location.state || { questions: [], config: {} };
+    const { questions, user_name, config } = location.state || { questions: [], user_name: 'Candidate', config: {} };
 
     const [currentIndex, setCurrentIndex] = useState(0);
     const [answer, setAnswer] = useState('');
@@ -100,6 +100,13 @@ const Interview = () => {
                         ></div>
                     </div>
                 </div>
+
+                {currentIndex === 0 && !feedback && (
+                    <div className="mb-6 p-6 bg-white border border-indigo-100 rounded-2xl shadow-sm animate-in fade-in slide-in-from-top-4 duration-700">
+                        <h3 className="text-2xl font-bold text-gray-900 mb-1">Hello {user_name}! 👋</h3>
+                        <p className="text-gray-600">Let's start your {config.category.toLowerCase()} interview for the {config.jobRole} position.</p>
+                    </div>
+                )}
 
                 {/* Question Card */}
                 <div className="card mb-6">

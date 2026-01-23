@@ -109,7 +109,7 @@ class AIEngine:
                 # Prepend System Prompt for Gemini
                 full_prompt = f"{SYSTEM_PROMPT}\n\n{prompt}"
                 response = self.gemini_client.models.generate_content(
-                    model='gemini-1.5-flash',
+                    model='gemini-flash-latest',
                     contents=full_prompt
                 )
                 return self._clean_and_parse_json(response.text)
@@ -167,7 +167,7 @@ class AIEngine:
                 # Prepend System Prompt for Gemini
                 full_prompt = f"{SYSTEM_PROMPT}\n\n{prompt}"
                 response = self.gemini_client.models.generate_content(
-                    model='gemini-1.5-flash',
+                    model='gemini-flash-latest',
                     contents=full_prompt
                 )
                 return self._clean_and_parse_json(response.text)
@@ -255,7 +255,7 @@ class AIEngine:
                 full_prompt += "AI:"
                 
                 response = self.gemini_client.models.generate_content(
-                    model='gemini-1.5-flash',
+                    model='gemini-flash-latest',
                     contents=full_prompt
                 )
                 return response.text
@@ -264,6 +264,44 @@ class AIEngine:
                 return "I apologize, but I am encountering technical difficulties. Please try again."
         
         return "AI Service Unavailable."
+
+    def extract_name(self, resume_text):
+        """
+        Extracts the candidate's name from the resume text using AI.
+        """
+        prompt = f"""
+        Extract the full name of the candidate from the following resume text.
+        This is typically the first large text block or the main header.
+        Return ONLY the name (First and Last).
+        If the text looks like a filename (e.g. maxresdefault.jpg or resume_2024), ignore it and try to find a real person's name.
+        If no name is found, return "Candidate".
+        
+        Resume Text:
+        {resume_text[:1000]}
+        """
+        
+        if self.groq_client:
+            try:
+                chat_completion = self.groq_client.chat.completions.create(
+                    messages=[{"role": "user", "content": prompt}],
+                    model="llama-3.3-70b-versatile",
+                    temperature=0.1
+                )
+                return chat_completion.choices[0].message.content.strip()
+            except Exception as e:
+                print(f"Groq Name Extraction Error: {e}")
+
+        if self.gemini_client:
+            try:
+                response = self.gemini_client.models.generate_content(
+                    model='gemini-flash-latest',
+                    contents=prompt
+                )
+                return response.text.strip()
+            except Exception as e:
+                print(f"Gemini Name Extraction Error: {e}")
+                
+        return "Candidate"
 
     def _clean_and_parse_json(self, text):
         try:
