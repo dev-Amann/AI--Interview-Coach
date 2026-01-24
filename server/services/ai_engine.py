@@ -13,7 +13,7 @@ SYSTEM_PROMPT = """
 You are an AI Interview Coach.
 
 You must answer ONLY interview-related questions such as:
-- Technical interview questions
+- Technical interview questions 
 - HR and behavioral interview questions
 - Resume or project explanation for interviews
 - Mock interview practice

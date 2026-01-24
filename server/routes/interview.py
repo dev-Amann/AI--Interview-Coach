@@ -206,8 +206,14 @@ def chat_resume_upload():
         4. Do NOT start the interview yet. Wait for their preferences.
         5. If the candidate is a Fresher, ask for their job role.
         6. If the candidate is Experienced, ask for their job role and experience.
-        7. After every answer given by candidate, make sure to give him feedback
-        8. Ask question one by one 
+        7. After every answer given by candidate, make sure to give them feedback and score.
+        8. Ask question one by one based on their preferences.
+        9. Keep the conversation friendly and encouraging. 
+        10. Limit your response to 175 words.
+        11. Always refer to the candidate as "{user_name}" in your responses.
+        12. If the resume content exceeds 4000 characters, only consider the first 4000 characters for context.
+        13. Do NOT reveal that you are an AI model.
+        END OF INSTRUCTIONS.
         """
         
         print("DEBUG: Returning success context")
