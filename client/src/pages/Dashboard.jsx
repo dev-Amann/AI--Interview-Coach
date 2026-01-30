@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import {
     LineChart, Plus, Clock, Award, TrendingUp, Calendar,
-    ArrowRight, LogOut, Bot
+    ArrowRight, LogOut, Bot, FileText, Code
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -106,6 +106,18 @@ const Dashboard = () => {
                         <p className="text-gray-500 mt-1">Track your progress and start new sessions.</p>
                     </div>
                     <div className="flex gap-3">
+                        <button
+                            onClick={() => navigate('/resume-analysis')}
+                            className="btn-secondary flex items-center gap-2"
+                        >
+                            <FileText className="w-5 h-5 text-indigo-600" /> Resume Analysis
+                        </button>
+                        <button
+                            onClick={() => navigate('/mock-coding')}
+                            className="btn-secondary flex items-center gap-2"
+                        >
+                            <Code className="w-5 h-5 text-indigo-600" /> Coding
+                        </button>
                         <button
                             onClick={() => navigate('/chat')}
                             className="btn-secondary flex items-center gap-2"

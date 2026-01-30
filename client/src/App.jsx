@@ -8,6 +8,8 @@ import Setup from './pages/Setup'
 import Interview from './pages/Interview'
 import Results from './pages/Results'
 import ChatInterview from './pages/ChatInterview'
+import ResumeAnalysis from './pages/ResumeAnalysis'
+import MockCoding from './pages/MockCoding'
 
 // Placeholder components
 const NotFound = () => <div className="p-10">404 - Not Found</div>
@@ -81,6 +83,48 @@ function App() {
             <>
               <SignedIn>
                 <ChatInterview />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+
+        <Route
+          path="/interview/chat"
+          element={
+            <>
+              <SignedIn>
+                <ChatInterview />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+
+        <Route
+          path="/resume-analysis"
+          element={
+            <>
+              <SignedIn>
+                <ResumeAnalysis />
+              </SignedIn>
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+
+        <Route
+          path="/mock-coding"
+          element={
+            <>
+              <SignedIn>
+                <MockCoding />
               </SignedIn>
               <SignedOut>
                 <RedirectToSignIn />

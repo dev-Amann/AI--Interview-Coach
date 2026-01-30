@@ -188,12 +188,18 @@ def chat_resume_upload():
             
         ai = AIEngine()
         user_name = ai.extract_name(resume_text)
-        print(f"DEBUG: Extracted user name: {user_name}")
+        
+        job_role = request.form.get('job_role', 'Any Role')
+        difficulty = request.form.get('difficulty', 'Medium')
+        
+        print(f"DEBUG: Extracted user name: {user_name}, Role: {job_role}")
 
         # Prepare context prompt for the AI
         context_message = f"""
-        [SYSTEM: The candidate has uploaded a resume. 
+        [SYSTEM: The candidate has uploaded a resume for a Mock Interview.
         Candidate Name: {user_name}
+        Target Job Role: {job_role}
+        Difficulty Level: {difficulty}
         Resume Content:
         {resume_text[:4000]} 
         
@@ -201,18 +207,14 @@ def chat_resume_upload():
         
         INSTRUCTIONS:
         1. Greet the candidate by name (e.g., "Hello {user_name}!").
-        2. Ask the candidate if they are a Fresher or Experienced.
-        3. Ask how many questions they would like to practice.
-        4. Do NOT start the interview yet. Wait for their preferences.
-        5. If the candidate is a Fresher, ask for their job role.
-        6. If the candidate is Experienced, ask for their job role and experience.
-        7. After every answer given by candidate, make sure to give them feedback and score.
-        8. Ask question one by one based on their preferences.
-        9. Keep the conversation friendly and encouraging. 
-        10. Limit your response to 175 words.
-        11. Always refer to the candidate as "{user_name}" in your responses.
-        12. If the resume content exceeds 4000 characters, only consider the first 4000 characters for context.
-        13. Do NOT reveal that you are an AI model.
+        2. Acknowledge their application for the {job_role} position.
+        3. Do NOT ask if they are fresher/experienced if it's clear from resume, just start the interview.
+        4. Ask Technical or Behavioral questions relevant to {job_role} at {difficulty} level.
+        5. Provide short, constructive feedback after every answer.
+        6. Keep the conversation friendly and professional. 
+        7. Limit your response to 150 words.
+        8. Always refer to the candidate as "{user_name}" or "Candidate".
+        9. Do NOT reveal that you are an AI model.
         END OF INSTRUCTIONS.
         """
         
@@ -223,4 +225,140 @@ def chat_resume_upload():
         import traceback
         print(f"CRITICAL ERROR in chat_resume_upload: {e}")
         traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@interview_bp.route('/resume/analyze', methods=['POST'])
+def analyze_resume():
+    try:
+        if 'resume' not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+            
+        file = request.files['resume']
+        from services.resume_parser import extract_text
+        resume_text = extract_text(file)
+        
+        if resume_text.startswith("Error"):
+            return jsonify({"error": resume_text}), 400
+            
+        ai = AIEngine()
+        analysis = ai.analyze_resume_deep(resume_text)
+        
+        return jsonify(analysis)
+        
+    except Exception as e:
+        print(f"Analyze Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@interview_bp.route('/coding/problem', methods=['POST'])
+def generate_coding_problem():
+    try:
+        data = request.json
+        language = data.get('language', 'Python')
+        topic = data.get('topic', 'Arrays')
+        difficulty = data.get('difficulty', 'Easy')
+        
+        ai = AIEngine()
+        problem = ai.generate_coding_problem(language, topic, difficulty)
+        return jsonify(problem)
+    except Exception as e:
+        print(f"Gen Problem Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@interview_bp.route('/coding/review', methods=['POST'])
+def review_coding_submission():
+    try:
+        data = request.json
+        code = data.get('code')
+        problem_description = data.get('problem_description')
+        language = data.get('language')
+        
+        ai = AIEngine()
+        review = ai.review_code(code, problem_description, language)
+        return jsonify(review)
+    except Exception as e:
+        print(f"Review Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@interview_bp.route('/analyze', methods=['POST'])
+def analyze_interview():
+    """
+    Analyze the complete interview session and provide detailed feedback.
+    Expects: conversation_history, behavioral_alerts, job_role, difficulty
+    Returns: detailed analysis with scores and recommendations
+    """
+    try:
+        data = request.json
+        conversation = data.get('conversation', [])
+        behavioral_alerts = data.get('behavioral_alerts', [])
+        job_role = data.get('job_role', 'Software Developer')
+        difficulty = data.get('difficulty', 'Medium')
+        user_name = data.get('user_name', 'Candidate')
+        
+        # Build the analysis prompt
+        conversation_text = ""
+        for msg in conversation:
+            role = "Interviewer" if msg.get('role') == 'assistant' else "Candidate"
+            conversation_text += f"{role}: {msg.get('content', '')}\n\n"
+        
+        alerts_text = ""
+        if behavioral_alerts:
+            alerts_text = "Behavioral Observations:\n"
+            for alert in behavioral_alerts:
+                alerts_text += f"- {alert.get('message', alert)}\n"
+        
+        analysis_prompt = f"""You are an expert interview coach analyzing a mock interview session.
+
+**Interview Details:**
+- Job Role: {job_role}
+- Difficulty Level: {difficulty}
+- Candidate Name: {user_name}
+
+**Interview Transcript:**
+{conversation_text}
+
+**Behavioral Analysis (from AI monitoring):**
+{alerts_text if alerts_text else "No significant behavioral alerts detected."}
+
+Please provide a comprehensive interview analysis in the following JSON format:
+{{
+    "overall_score": <number 1-100>,
+    "communication_score": <number 1-100>,
+    "technical_score": <number 1-100>,
+    "confidence_score": <number 1-100>,
+    "body_language_score": <number 1-100>,
+    "strengths": ["<strength 1>", "<strength 2>", ...],
+    "areas_for_improvement": ["<area 1>", "<area 2>", ...],
+    "detailed_feedback": "<2-3 paragraphs of personalized feedback>",
+    "recommendations": ["<actionable recommendation 1>", "<actionable recommendation 2>", ...],
+    "verdict": "<READY FOR INTERVIEWS | NEEDS PRACTICE | EXCELLENT PERFORMANCE>"
+}}
+
+Be encouraging but honest. Focus on actionable improvements.
+"""
+        
+        ai = AIEngine()
+        response = ai.chat([{"role": "user", "content": analysis_prompt}])
+        
+        # Try to parse JSON from response
+        import json
+        import re
+        
+        # Find JSON in response
+        json_match = re.search(r'\{[\s\S]*\}', response)
+        if json_match:
+            analysis = json.loads(json_match.group())
+            return jsonify({"success": True, "analysis": analysis})
+        else:
+            # Return raw text if JSON parsing fails
+            return jsonify({
+                "success": True, 
+                "analysis": {
+                    "overall_score": 75,
+                    "detailed_feedback": response,
+                    "verdict": "NEEDS REVIEW"
+                }
+            })
+            
+    except Exception as e:
+        print(f"Analysis Error: {e}")
         return jsonify({"error": str(e)}), 500

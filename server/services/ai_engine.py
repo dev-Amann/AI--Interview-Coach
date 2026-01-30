@@ -44,6 +44,8 @@ class AIEngine:
         self.gemini_client = None
         if self.gemini_api_key:
             try:
+                # Initialize Gemini client
+                # This client is also used for Image OCR (Resume Parsing) in resume_parser.py
                 self.gemini_client = genai.Client(api_key=self.gemini_api_key)
             except Exception as e:
                 print(f"Gemini Init Error: {e}")
@@ -226,9 +228,207 @@ class AIEngine:
             ]
         }
 
-    def chat(self, messages):
+    def generate_coding_problem(self, language, topic, difficulty):
+        prompt = f"""
+        Generate a coding problem for a technical interview.
+        Language: {language}
+        Topic: {topic}
+        Difficulty: {difficulty}
+        
+        Return the response in strictly valid JSON format with the following keys:
+        - title: The title of the problem.
+        - description: A clear description of the problem, including input/output examples.
+        - starter_code: The initial code boilerplate for the user to start with.
+        
+        IMPORTANT RULES FOR STARTER_CODE:
+        - It must ONLY contain the function definition and maybe a 'pass' statement or return 0.
+        - DO NOT include the solution logic.
+        - DO NOT include the answer.
+        - It should look like this:
+          def solution(arr):
+              # Write your code here
+              pass
+        
+        Do not include any markdown formatting like ```json ... ```. Just the raw JSON string.
+        """
+        
+        response_text = ""
+        if self.groq_client:
+            try:
+                chat_completion = self.groq_client.chat.completions.create(
+                    messages=[{"role": "user", "content": prompt}],
+                    model="llama-3.3-70b-versatile",
+                    temperature=0.7
+                )
+                response_text = chat_completion.choices[0].message.content
+            except Exception as e:
+                print(f"Groq Gen Problem Error: {e}")
+                
+        if not response_text and self.gemini_client:
+             try:
+                response = self.gemini_client.models.generate_content(
+                    model='gemini-flash-latest',
+                    contents=prompt
+                )
+                response_text = response.text
+             except Exception as e:
+                print(f"Gemini Gen Problem Error: {e}")
 
-        system_message = {"role": "system", "content": SYSTEM_PROMPT}
+        try:
+            # Clean up potential markdown formatting if the model disregards instructions
+            cleaned_text = response_text.replace("```json", "").replace("```", "").strip()
+            return json.loads(cleaned_text)
+        except json.JSONDecodeError:
+            return {
+                "title": "Error Generating Problem",
+                "description": "Could not generate a valid problem. Please try again.",
+                "starter_code": "# Error generating code"
+            }
+
+    def review_code(self, code, problem_description, language):
+        prompt = f"""
+        Review the following code solution for a technical interview problem.
+        
+        Problem Description:
+        {problem_description}
+        
+        Language: {language}
+        
+        User's Code:
+        {code}
+        
+        Provide a detailed review in strictly valid JSON format with the following keys:
+        - is_correct: boolean, true if the code solves the problem correctly.
+        - feedback: string, general feedback on the approach.
+        - bugs: list of strings, identifying any bugs or edge cases missed.
+        - optimization_tips: list of strings, suggestions to improve time/space complexity or code style.
+        - corrected_code: string, a corrected or optimized version of the code (optional, mainly if there are bugs).
+        
+        Do not include any markdown formatting like ```json ... ```. Just the raw JSON string.
+        """
+        
+        response_text = ""
+        if self.groq_client:
+            try:
+                chat_completion = self.groq_client.chat.completions.create(
+                    messages=[{"role": "user", "content": prompt}],
+                    model="llama-3.3-70b-versatile",
+                    temperature=0.5
+                )
+                response_text = chat_completion.choices[0].message.content
+            except Exception as e:
+                print(f"Groq Code Review Error: {e}")
+
+        if not response_text and self.gemini_client:
+             try:
+                response = self.gemini_client.models.generate_content(
+                    model='gemini-flash-latest',
+                    contents=prompt
+                )
+                response_text = response.text
+             except Exception as e:
+                print(f"Gemini Code Review Error: {e}")
+                
+        try:
+            cleaned_text = response_text.replace("```json", "").replace("```", "").strip()
+            return json.loads(cleaned_text)
+        except json.JSONDecodeError:
+             return {
+                "is_correct": False,
+                "feedback": "Error parsing AI response.",
+                "bugs": [],
+                "optimization_tips": []
+            }
+
+    def analyze_resume_deep(self, resume_text):
+        """
+        Performs a deep analysis of the resume text to provide ATS score, strengths, weakneses, etc.
+        """
+        prompt = f"""
+        Analyze the following resume text deeply as an expert Technical Recruiter.
+        
+        Resume Content:
+        {resume_text[:4000]}
+        
+        Provide a detailed analysis in JSON format with the following structure:
+        {{
+            "ats_score": <number 0-100 based on keyword matching and format>,
+            "summary": "<2 sentence summary of the candidate profile>",
+            "strengths": ["list", "of", "top", "skills/strengths"],
+            "weaknesses": ["list", "of", "missing", "skills", "or", "issues"],
+            "missing_skills": ["list", "of", "industry", "standard", "skills", "missing"],
+            "suggested_roles": ["Role 1", "Role 2", "Role 3"]
+        }}
+        
+        Be critical but constructive. Return ONLY valid JSON.
+        """
+        
+        if self.groq_client:
+            try:
+                messages = [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt}
+                ]
+                chat_completion = self.groq_client.chat.completions.create(
+                    messages=messages,
+                    model="llama-3.3-70b-versatile",
+                    temperature=0.4
+                )
+                return self._clean_and_parse_json(chat_completion.choices[0].message.content)
+            except Exception as e:
+                print(f"Groq Resume Analysis Error: {e}")
+
+        if self.gemini_client:
+            try:
+                response = self.gemini_client.models.generate_content(
+                    model='gemini-flash-latest',
+                    contents=prompt
+                )
+                return self._clean_and_parse_json(response.text)
+            except Exception as e:
+                print(f"Gemini Resume Analysis Error: {e}")
+                
+        # Fallback
+        return {
+            "ats_score": 0,
+            "summary": "Could not analyze resume due to AI service error.",
+            "strengths": [],
+            "weaknesses": [],
+            "missing_skills": [],
+            "suggested_roles": []
+        }
+
+    def chat(self, messages):
+        # Enhanced interviewer prompt for realistic, varied interview experience
+        interviewer_prompt = """You are an experienced Technical Interviewer conducting a mock interview.
+
+CRITICAL RULES:
+1. **Ask ONE question at a time** - Never ask multiple questions in one response.
+2. **NEVER repeat a question** - Track what you've already asked and always ask something NEW.
+3. **Follow up on answers** - If the candidate's answer is incomplete or interesting, probe deeper.
+4. **Progress naturally** - Start with introduction, then move through different topics.
+5. **Be conversational** - Respond to what the candidate says before asking the next question.
+6. **Vary question types** - Mix technical, behavioral, situational, and experience-based questions.
+7. **IMPORTANT: Check conversation history** - Look at all previous messages to avoid repeating questions.
+
+INTERVIEW FLOW:
+- First few exchanges: Warm-up (introduce yourself, ask about their background)
+- Middle: Core technical and behavioral questions based on their role/experience
+- Later: Scenario-based questions, problem-solving, or deeper technical discussions
+- End: Give them a chance to ask questions
+
+QUESTION VARIETY (rotate through these):
+- Technical concepts and fundamentals
+- Past project experiences ("Tell me about a time when...")
+- Problem-solving scenarios ("How would you handle...")
+- System design or architecture (for senior roles)
+- Behavioral questions (teamwork, challenges, growth)
+
+Always be professional, encouraging, and constructive. After they answer, briefly acknowledge their response before moving to the next topic.
+
+If the user asks non-interview questions, politely redirect: "I am designed to help only with interview-related questions. Please ask an interview-related question."
+"""
+        system_message = {"role": "system", "content": interviewer_prompt}
         
         
         final_messages = [system_message] + messages

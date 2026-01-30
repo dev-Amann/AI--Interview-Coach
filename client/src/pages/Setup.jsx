@@ -14,7 +14,7 @@ const Setup = () => {
         resumeFile: null
     });
 
-    const handleSubmit = async (e) => {
+    const handleStartStandard = async (e) => {
         e.preventDefault();
         if (!formData.resumeFile) return;
 
@@ -27,12 +27,9 @@ const Setup = () => {
             data.append('difficulty', formData.difficulty);
 
             const response = await api.post('/interview/start', data, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
 
-            // Navigate to interview with generated questions
             navigate('/interview', {
                 state: {
                     questions: response.data.questions,
@@ -48,6 +45,21 @@ const Setup = () => {
         }
     };
 
+    const handleStartReal = (e) => {
+        e.preventDefault();
+        if (!formData.resumeFile) return;
+
+        // Setup for Real Interview (Chat Mode)
+        // We navigate to /interview/chat and pass data to init there
+        navigate('/interview/chat', {
+            state: {
+                mode: 'real',
+                config: formData,
+                resumeFile: formData.resumeFile // Note: passing File object in state is non-standard but works in SPA
+            }
+        });
+    };
+
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
             <div className="max-w-2xl w-full">
@@ -57,7 +69,7 @@ const Setup = () => {
                 </div>
 
                 <div className="card">
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form className="space-y-6">
 
                         {/* Job Role */}
                         <div>
@@ -136,21 +148,26 @@ const Setup = () => {
                             </div>
                         </div>
 
-                        <button
-                            type="submit"
-                            disabled={isLoading || !formData.resumeFile}
-                            className="btn-primary w-full flex items-center justify-center gap-2 py-3 text-lg"
-                        >
-                            {isLoading ? (
-                                <>
-                                    <Loader2 className="w-5 h-5 animate-spin" /> Generating Questions...
-                                </>
-                            ) : (
-                                <>
-                                    Start Interview <ArrowRight className="w-5 h-5" />
-                                </>
-                            )}
-                        </button>
+                        <div className="grid grid-cols-2 gap-4 pt-4">
+                            <button
+                                onClick={handleStartStandard}
+                                disabled={isLoading || !formData.resumeFile}
+                                className="w-full py-3 px-4 border border-indigo-600 text-indigo-600 rounded-xl hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 font-medium"
+                            >
+                                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Context Based Interview"}
+                            </button>
+
+                            <button
+                                onClick={handleStartReal}
+                                disabled={isLoading || !formData.resumeFile}
+                                className="w-full py-3 px-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 font-bold shadow-md shadow-indigo-200"
+                            >
+                                Start Real AI Interview <ArrowRight className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <p className="text-center text-xs text-gray-400">
+                            "Real AI Interview" enables Camera & Voice for a realistic experience.
+                        </p>
                     </form>
                 </div>
             </div>
