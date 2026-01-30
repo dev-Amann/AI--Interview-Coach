@@ -130,7 +130,6 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # Create .env file
-cp .env.example .env
 ```
 
 Edit `.env` with your credentials:
@@ -157,7 +156,7 @@ cd client
 npm install
 
 # Create .env file
-echo "VITE_CLERK_PUBLISHABLE_KEY=your_clerk_key" > .env.local
+echo "VITE_CLERK_PUBLISHABLE_KEY=your_clerk_key" > .env
 ```
 
 ### 5. Run the Application
