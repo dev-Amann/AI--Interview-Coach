@@ -1,187 +1,212 @@
-import os
-import json
-from google import genai
-from groq import Groq
-from dotenv import load_dotenv
+from flask import Blueprint, request, jsonify, send_file
+import uuid
+import io
 
-load_dotenv()
+from services.resume_parser import extract_text
+from services.chunker import extract_text_from_json, chunk_text
+from services.temp_store import save_ocr, get_ocr
+from services.ai_engine import AIEngine
+from services.database import Database
+from services.pdf_generator import generate_interview_report
 
-SYSTEM_PROMPT = """
-You are an AI Interview Coach.
+interview_bp = Blueprint('interview', __name__)
 
-You must answer ONLY interview-related questions such as:
-- Technical interview questions 
-- HR and behavioral interview questions
-- Resume or project explanation for interviews
-- Mock interview practice
-- Career guidance related to interviews
 
-If the user asks any question that is NOT related to interview preparation,
-do NOT answer it.
+# ==========================================================
+# START INTERVIEW (UPDATED WITH TEMP STORE + CHUNKING)
+# ==========================================================
+@interview_bp.route('/start', methods=['POST'])
+def start_interview():
+    try:
+        session_id = str(uuid.uuid4())
 
-Instead, respond only with:
-"I am designed to help only with interview-related questions. Please ask an interview-related question."
+        job_role = request.form.get('job_role')
+        category = request.form.get('category', 'Technical')
+        difficulty = request.form.get('difficulty', 'Medium')
 
-Follow this rule strictly.
-"""
+        if not job_role:
+            return jsonify({"error": "Job role is required"}), 400
 
-class AIEngine:
-    def __init__(self):
-        self.groq_api_key = os.getenv("GROQ_API_KEY")
-        self.gemini_api_key = os.getenv("GEMINI_API_KEY")
+        if 'resume_file' not in request.files:
+            return jsonify({"error": "Resume file is required"}), 400
 
-        self.groq_client = None
-        if self.groq_api_key:
-            try:
-                self.groq_client = Groq(api_key=self.groq_api_key)
-            except Exception as e:
-                print(f"Groq Init Error: {e}")
+        file = request.files['resume_file']
 
-        self.gemini_client = None
-        if self.gemini_api_key:
-            try:
-                self.gemini_client = genai.Client(api_key=self.gemini_api_key)
-            except Exception as e:
-                print(f"Gemini Init Error: {e}")
+        # ✅ STEP 1 — OCR → JSON
+        ocr_json = extract_text(file)
 
-    # ==========================================================
-    # NEW METHOD — CHUNK-BASED RESUME ANALYSIS (SAFE ADDITION)
-    # ==========================================================
-    def analyze_resume_from_chunks(self, chunks):
-        """
-        Performs deep resume analysis using chunked resume text.
-        """
+        # ✅ STEP 2 — Save to Temporary Store
+        save_ocr(session_id, ocr_json)
 
-        if not chunks:
-            return {
-                "ats_score": 0,
-                "summary": "No resume content found.",
-                "strengths": [],
-                "weaknesses": [],
-                "missing_skills": [],
-                "suggested_roles": []
-            }
+        # ✅ STEP 3 — Extract + Chunk
+        full_text = extract_text_from_json(ocr_json)
+        chunks = chunk_text(full_text)
+        print("DEBUG: Total words:", len(full_text.split()))
+        print("DEBUG: Number of chunks:", len(chunks))
+        print("DEBUG: First chunk preview:", chunks[0][:200])
 
-        partial_analyses = []
+        ai = AIEngine()
 
-        for chunk in chunks:
-            prompt = f"""
-            Analyze this portion of a resume as an expert Technical Recruiter.
-            
-            Resume Section:
-            {chunk}
+        # ✅ STEP 4 — Deep Resume Analysis (Chunk-Based)
+        resume_analysis = ai.analyze_resume_from_chunks(chunks)
 
-            Return JSON:
-            {{
-                "strengths": [],
-                "weaknesses": [],
-                "skills_detected": []
-            }}
+        # ✅ STEP 5 — Generate Interview Questions (using text)
+        questions = ai.generate_questions(full_text, job_role, category, difficulty)
 
-            Return ONLY valid JSON.
-            """
+        user_name = ai.extract_name(full_text)
 
-            try:
-                if self.groq_client:
-                    messages = [
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": prompt}
-                    ]
+        return jsonify({
+            "session_id": session_id,
+            "questions": questions,
+            "user_name": user_name,
+            "resume_analysis": resume_analysis
+        })
 
-                    response = self.groq_client.chat.completions.create(
-                        messages=messages,
-                        model="llama-3.3-70b-versatile",
-                        temperature=0.4
-                    )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-                    parsed = self._clean_and_parse_json(
-                        response.choices[0].message.content
-                    )
 
-                    if parsed:
-                        partial_analyses.append(parsed)
+# ==========================================================
+# SUBMIT ANSWER 
+# ==========================================================
+@interview_bp.route('/answer', methods=['POST'])
+def submit_answer():
+    try:
+        data = request.json
+        question = data.get('question')
+        answer = data.get('answer')
+        job_role = data.get('job_role')
 
-            except Exception as e:
-                print(f"Chunk Analysis Error: {e}")
+        if not all([question, answer, job_role]):
+            return jsonify({"error": "Missing required fields"}), 400
 
-        combined_strengths = []
-        combined_weaknesses = []
-        combined_skills = []
+        ai = AIEngine()
+        result = ai.evaluate_answer(question, answer, job_role)
 
-        for item in partial_analyses:
-            combined_strengths.extend(item.get("strengths", []))
-            combined_weaknesses.extend(item.get("weaknesses", []))
-            combined_skills.extend(item.get("skills_detected", []))
+        return jsonify(result)
 
-        combined_strengths = list(set(combined_strengths))
-        combined_weaknesses = list(set(combined_weaknesses))
-        combined_skills = list(set(combined_skills))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-        final_prompt = f"""
-        Based on these extracted resume insights:
 
-        Strengths: {combined_strengths}
-        Weaknesses: {combined_weaknesses}
-        Skills: {combined_skills}
+# ==========================================================
+# SAVE SESSION 
+# ==========================================================
+@interview_bp.route('/save', methods=['POST'])
+def save_session():
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        user_email = data.get('email')
+        user_name = data.get('name')
 
-        Provide final JSON:
+        db = Database()
+        db.save_user(user_id, user_email, user_name)
 
-        {{
-            "ats_score": <0-100>,
-            "summary": "",
-            "strengths": [],
-            "weaknesses": [],
-            "missing_skills": [],
-            "suggested_roles": []
-        }}
+        session_id = db.save_session(
+            user_id=user_id,
+            job_role=data.get('job_role'),
+            category=data.get('category'),
+            difficulty=data.get('difficulty'),
+            avg_score=data.get('avg_score'),
+            qualified=data.get('qualified'),
+            questions=data.get('questions'),
+            answers=data.get('answers'),
+            scores=data.get('scores'),
+            feedback_list=data.get('feedback_list'),
+            ideal_answers_list=data.get('ideal_answers_list')
+        )
 
-        Return ONLY valid JSON.
-        """
+        return jsonify({"session_id": session_id, "message": "Session saved successfully"})
 
-        try:
-            if self.groq_client:
-                messages = [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": final_prompt}
-                ]
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-                response = self.groq_client.chat.completions.create(
-                    messages=messages,
-                    model="llama-3.3-70b-versatile",
-                    temperature=0.4
-                )
 
-                return self._clean_and_parse_json(
-                    response.choices[0].message.content
-                )
+# ==========================================================
+# REPORT GENERATION 
+# ==========================================================
+@interview_bp.route('/report', methods=['POST'])
+def generate_report():
+    try:
+        data = request.json
+        pdf_bytes = generate_interview_report(data)
 
-        except Exception as e:
-            print(f"Final Resume Merge Error: {e}")
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name='interview_report.pdf'
+        )
 
-        return {
-            "ats_score": 0,
-            "summary": "Could not complete resume analysis.",
-            "strengths": combined_strengths,
-            "weaknesses": combined_weaknesses,
-            "missing_skills": [],
-            "suggested_roles": []
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@interview_bp.route('/report/<session_id>', methods=['GET'])
+def download_report(session_id):
+    try:
+        db = Database()
+        session = db.get_session_details(session_id)
+
+        if not session:
+            return jsonify({"error": "Session not found"}), 404
+
+        responses = session.get('responses', [])
+
+        report_data = {
+            "user_name": "Reviewer",
+            "job_role": session.get('job_role'),
+            "category": session.get('category'),
+            "difficulty": session.get('difficulty'),
+            "avg_score": float(session.get('avg_score', 0)),
+            "qualified": bool(session.get('qualified')),
+            "questions": [r['question'] for r in responses],
+            "answers": {i: r['answer'] for i, r in enumerate(responses)},
+            "scores": [r['score'] for r in responses],
+            "feedback_list": [r['feedback'] for r in responses],
+            "ideal_answers_list": [r['ideal_answer'] for r in responses]
         }
 
-    # ==========================================================
-    # EXISTING METHODS BELOW (UNCHANGED LOGIC)
-    # ==========================================================
+        pdf_bytes = generate_interview_report(report_data)
 
-    def _clean_and_parse_json(self, text):
-        try:
-            cleaned = text.strip()
-            if cleaned.startswith("```"):
-                lines = cleaned.splitlines()
-                if lines[0].startswith("```"):
-                    lines = lines[1:]
-                if lines[-1].startswith("```"):
-                    lines = lines[:-1]
-                cleaned = "\n".join(lines)
-            return json.loads(cleaned)
-        except Exception as e:
-            print(f"JSON Parsing Error: {e} | Text: {text}")
-            return None
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f'interview_report_{session_id}.pdf'
+        )
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+# ==========================================================
+# RESUME ANALYSIS 
+# ==========================================================
+@interview_bp.route('/resume/analyze', methods=['POST'])
+def analyze_resume():
+    try:
+        if 'resume' not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+
+        file = request.files['resume']
+
+        ocr_json = extract_text(file)
+
+        full_text = extract_text_from_json(ocr_json)
+
+    
+        chunks = chunk_text(full_text)
+
+        print("DEBUG: Resume Analyze - Total words:", len(full_text.split()))
+        print("DEBUG: Resume Analyze - Number of chunks:", len(chunks))
+
+        ai = AIEngine()
+
+        analysis = ai.analyze_resume_from_chunks(chunks)
+
+        return jsonify(analysis)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
