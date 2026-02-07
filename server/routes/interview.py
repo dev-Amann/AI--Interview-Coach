@@ -67,7 +67,7 @@ def start_interview():
 
 
 # ==========================================================
-# SUBMIT ANSWER (UNCHANGED)
+# SUBMIT ANSWER 
 # ==========================================================
 @interview_bp.route('/answer', methods=['POST'])
 def submit_answer():
@@ -90,7 +90,7 @@ def submit_answer():
 
 
 # ==========================================================
-# SAVE SESSION (UNCHANGED)
+# SAVE SESSION 
 # ==========================================================
 @interview_bp.route('/save', methods=['POST'])
 def save_session():
@@ -124,7 +124,7 @@ def save_session():
 
 
 # ==========================================================
-# REPORT GENERATION (UNCHANGED)
+# REPORT GENERATION 
 # ==========================================================
 @interview_bp.route('/report', methods=['POST'])
 def generate_report():
@@ -181,7 +181,7 @@ def download_report(session_id):
         return jsonify({"error": str(e)}), 500
     
 # ==========================================================
-# RESUME ANALYSIS (MISSING ROUTE - ADDED SAFELY)
+# RESUME ANALYSIS 
 # ==========================================================
 @interview_bp.route('/resume/analyze', methods=['POST'])
 def analyze_resume():
@@ -202,13 +202,33 @@ def analyze_resume():
 
         print("DEBUG: Resume Analyze - Total words:", len(full_text.split()))
         print("DEBUG: Resume Analyze - Number of chunks:", len(chunks))
+        chunk_previews = []
+        for i, chunk in enumerate(chunks):
+            preview = chunk[:300]  # first 300 characters
+            print(f"\n--- Chunk {i+1} Preview ---")
+            print(preview)
+            print("---------------------------")
+
+            chunk_previews.append({
+                "chunk_number": i + 1,
+                "word_count": len(chunk.split()),
+                "preview": preview
+            })
+
 
         ai = AIEngine()
 
         # STEP 4 — Analyze using chunk-based method
         analysis = ai.analyze_resume_from_chunks(chunks)
 
-        return jsonify(analysis)
+       # return jsonify(analysis)
+        
+        return jsonify({
+           **analysis,
+           "chunk_count": len(chunks),
+           "chunk_previews": chunk_previews
+})
+
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
