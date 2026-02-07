@@ -32,13 +32,13 @@ def start_interview():
 
         file = request.files['resume_file']
 
-        # ✅ STEP 1 — OCR → JSON
+        
         ocr_json = extract_text(file)
 
-        # ✅ STEP 2 — Save to Temporary Store
+      
         save_ocr(session_id, ocr_json)
 
-        # ✅ STEP 3 — Extract + Chunk
+      
         full_text = extract_text_from_json(ocr_json)
         chunks = chunk_text(full_text)
         print("DEBUG: Total words:", len(full_text.split()))
@@ -47,10 +47,8 @@ def start_interview():
 
         ai = AIEngine()
 
-        # ✅ STEP 4 — Deep Resume Analysis (Chunk-Based)
         resume_analysis = ai.analyze_resume_from_chunks(chunks)
 
-        # ✅ STEP 5 — Generate Interview Questions (using text)
         questions = ai.generate_questions(full_text, job_role, category, difficulty)
 
         user_name = ai.extract_name(full_text)
