@@ -12,58 +12,66 @@ load_dotenv()
 def extract_text(file):
     """
     Main entry point for extracting text from a resume file (PDF or Image).
+    Now returns structured JSON instead of raw text.
     """
     if file.filename.lower().endswith('.pdf'):
         return _extract_text_from_pdf(file)
     elif file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
         return _extract_text_from_image(file)
-    return ""
+    return {"pages": []}
 
+
+# ===============================
+# PDF HANDLING
+# ===============================
 def _extract_text_from_pdf(pdf_file):
     try:
-        text = ""
+        pages_data = []
+
         with pdfplumber.open(pdf_file) as pdf:
-            for page in pdf.pages:
+            for i, page in enumerate(pdf.pages):
                 page_text = page.extract_text()
                 if page_text:
-                    text += page_text + "\n"
-        return text.strip()
+                    pages_data.append({
+                        "page_no": i + 1,
+                        "text": page_text.strip()
+                    })
+
+        return {"pages": pages_data}
+
     except Exception as e:
         print(f"Error parsing PDF: {e}")
-        return ""
+        return {"pages": []}
 
+
+# ===============================
+# IMAGE OCR (Gemini)
+# ===============================
 def _extract_text_from_image(image_file):
     try:
         from services.ai_engine import AIEngine
         ai = AIEngine()
-        
+
         if not ai.gemini_client:
             print("Gemini client not initialized. Check GEMINI_API_KEY.")
-            return "Error: Gemini AI service not available."
+            return {"pages": []}
 
-        # Reset file pointer and read bytes
         image_file.seek(0)
         image_bytes = image_file.read()
-        
-        # Check if bytes were actually read
-        if not image_bytes:
-            return "Error: Could not read image file content."
 
-        # Use the PIL Image to verify it's a valid image
+        if not image_bytes:
+            return {"pages": []}
+
+        # Validate image
         try:
             img = Image.open(io.BytesIO(image_bytes))
-            img.verify() # Basic verification
-            # After verify, we need to reopen or seek if we wanted to use img, 
-            # but we use bytes for Gemini.
+            img.verify()
         except Exception as img_err:
             print(f"Invalid image file: {img_err}")
-            return "Error: The uploaded file is not a valid image."
+            return {"pages": []}
 
-        if not image_bytes:
-            print("ERROR: Empty image bytes")
-            return "Error: Could not read image file content."
+        print(f"DEBUG: Sending image OCR request to Gemini (flash-latest)")
 
-        print(f"DEBUG: Sending image OCR request to Gemini (flash-latest) for {image_file.filename}")
         response = ai.gemini_client.models.generate_content(
             model='gemini-flash-latest',
             contents=[
@@ -74,18 +82,25 @@ def _extract_text_from_image(image_file):
                 )
             ]
         )
-        
+
         if response and response.text:
-            return response.text.strip()
-        return "Error: Gemini returned empty response."
-        
+            return {
+                "pages": [
+                    {
+                        "page_no": 1,
+                        "text": response.text.strip()
+                    }
+                ]
+            }
+
+        return {"pages": []}
+
     except Exception as e:
         err_msg = str(e)
         print(f"Error parsing Image with Gemini: {err_msg}")
         traceback.print_exc()
-        if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
-            return "Error: Gemini API Quota exceeded. Please wait a minute and try again."
-        return f"Error during OCR: {err_msg}"
+        return {"pages": []}
+
 
 # For backward compatibility
 def extract_text_from_pdf(pdf_file):
