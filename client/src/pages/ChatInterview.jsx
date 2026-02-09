@@ -11,7 +11,7 @@ const ChatInterview = () => {
     const { mode, config, resumeFile } = location.state || {};
 
     const [messages, setMessages] = useState([
-        { role: 'assistant', content: "Hello! I am your AI Interview Coach. I can conduct a mock interview, review your resume, or answer technical questions. How would you like to start?" }
+        { role: 'assistant', content: "Hello! I am your AI Interview Coach. To provide a personalized interview experience, please upload your resume to get started." }
     ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -82,7 +82,8 @@ const ChatInterview = () => {
             }));
 
             const response = await api.post('/interview/chat', { messages: apiMessages });
-            const aiMessage = { role: 'assistant', content: response.data.response };
+            if (!response.data) throw new Error("Empty response");
+            const aiMessage = { role: 'assistant', content: response.data.response || "I apologize, I received an empty response." };
             setMessages(prev => [...prev, aiMessage]);
 
             // Auto-speak the response in Real mode
@@ -372,22 +373,26 @@ const ChatInterview = () => {
                         <div ref={messagesEndRef} />
                     </div>
 
+                    {/* File Input (Moved here) */}
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,.doc,.docx,.txt"
+                        className="hidden"
+                        onChange={handleFileUpload}
+                    />
+
                     {/* Answer Input (Hidden if feedback is shown OR in Real Mode) */}
                     {!isLoading && mode !== 'real' && (
                         <div className="bg-white border-t border-gray-200 p-4">
                             <div className="max-w-4xl mx-auto relative flex items-center gap-2">
 
-                                <button className="p-2 text-gray-400 hover:text-indigo-600 transition-colors">
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="p-2 text-gray-400 hover:text-indigo-600 transition-colors"
+                                    title="Upload Resume">
                                     <Paperclip className="w-5 h-5" />
                                 </button>
-
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept=".pdf,.doc,.docx,.txt"
-                                    className="hidden"
-                                    onChange={handleFileUpload}
-                                />
 
                                 <div className="flex-1 relative">
                                     <textarea

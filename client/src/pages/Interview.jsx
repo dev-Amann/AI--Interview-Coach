@@ -41,12 +41,14 @@ const Interview = () => {
 
             const result = response.data;
 
+            if (!result) throw new Error("Empty response");
+
             // Update session data
             setSessionData(prev => ({
                 answers: { ...prev.answers, [currentIndex]: answer },
-                scores: [...prev.scores, result.score],
-                feedback_list: [...prev.feedback_list, result.feedback],
-                ideal_answers_list: [...prev.ideal_answers_list, result.ideal_answer]
+                scores: [...prev.scores, (result.score || 0)],
+                feedback_list: [...prev.feedback_list, (result.feedback || "No feedback")],
+                ideal_answers_list: [...prev.ideal_answers_list, (result.ideal_answer || "N/A")]
             }));
 
             setFeedback(result);

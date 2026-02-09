@@ -181,6 +181,47 @@ def download_report(session_id):
         return jsonify({"error": str(e)}), 500
     
 # ==========================================================
+# CHAT INTERVIEW (RESTORED)
+# ==========================================================
+@interview_bp.route('/chat', methods=['POST'])
+def chat():
+    try:
+        data = request.json
+        messages = data.get('messages', [])
+        
+        ai = AIEngine()
+        response = ai.chat(messages)
+        
+        return jsonify({"response": response})
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@interview_bp.route('/chat/resume', methods=['POST'])
+def chat_resume_upload():
+    try:
+        if 'resume' not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+            
+        file = request.files['resume']
+        job_role = request.form.get('job_role', 'Software Developer')
+        difficulty = request.form.get('difficulty', 'Medium')
+        
+        # OCR
+        ocr_json = extract_text(file)
+        full_text = extract_text_from_json(ocr_json)
+        
+        ai = AIEngine()
+        context = ai.analyze_resume_for_chat(full_text, job_role, difficulty)
+        
+        return jsonify({"context": context})
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ==========================================================
 # RESUME ANALYSIS 
 # ==========================================================
 @interview_bp.route('/resume/analyze', methods=['POST'])
@@ -230,6 +271,46 @@ def analyze_resume():
 })
 
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ==========================================================
+# MOCK CODING INTERVIEW
+# ==========================================================
+@interview_bp.route('/coding/problem', methods=['POST'])
+def generate_problem():
+    try:
+        data = request.json
+        language = data.get('language', 'Python')
+        topic = data.get('topic', 'Arrays')
+        difficulty = data.get('difficulty', 'Easy')
+        
+        ai = AIEngine()
+        problem = ai.generate_coding_problem(language, topic, difficulty)
+        
+        return jsonify(problem)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@interview_bp.route('/coding/review', methods=['POST'])
+def review_code():
+    try:
+        data = request.json
+        code = data.get('code')
+        problem_description = data.get('problem_description')
+        language = data.get('language')
+        
+        if not all([code, problem_description, language]):
+            return jsonify({"error": "Missing required fields"}), 400
+            
+        ai = AIEngine()
+        review = ai.review_code(code, problem_description, language)
+        
+        return jsonify(review)
+        
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     

@@ -44,8 +44,9 @@ const MockCoding = () => {
                 topic,
                 difficulty
             });
+            if (!response.data) throw new Error("Empty response");
             setProblem(response.data);
-            setCode(response.data.starter_code);
+            setCode(response.data.starter_code || "");
         } catch (error) {
             console.error("Error generating problem:", error);
             alert("Failed to generate problem. Please try again.");
@@ -146,8 +147,8 @@ const MockCoding = () => {
                                     <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium">{language}</span>
                                     <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium">{topic}</span>
                                     <span className={`px-2 py-1 rounded text-xs font-medium ${difficulty === 'Easy' ? 'bg-green-100 text-green-700' :
-                                            difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
-                                                'bg-red-100 text-red-700'
+                                        difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
+                                            'bg-red-100 text-red-700'
                                         }`}>{difficulty}</span>
                                 </div>
                                 <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
