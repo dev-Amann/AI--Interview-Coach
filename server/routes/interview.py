@@ -221,6 +221,40 @@ def chat_resume_upload():
         return jsonify({"error": str(e)}), 500
 
 
+@interview_bp.route('/analyze', methods=['POST'])
+def analyze_interview_session():
+    try:
+        data = request.json
+        conversation = data.get('conversation', [])
+        behavioral_alerts = data.get('behavioral_alerts', [])
+        job_role = data.get('job_role', 'Software Developer')
+        difficulty = data.get('difficulty', 'Medium')
+        user_name = data.get('user_name', 'Candidate')
+        
+        ai = AIEngine()
+        analysis = ai.analyze_interview(
+            conversation, 
+            behavioral_alerts, 
+            job_role, 
+            difficulty, 
+            user_name
+        )
+        
+        # Check if we got an error dictionary back
+        if not analysis or analysis.get("verdict") == "ERROR":
+            return jsonify({
+                "success": False, 
+                "error": analysis.get("detailed_feedback", "Failed to analyze interview.")
+            }), 500
+            
+        return jsonify({
+            "success": True,
+            "analysis": analysis
+        })
+        
+    except Exception as e:
+        print(f"Error in /analyze: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 # ==========================================================
 # RESUME ANALYSIS 
 # ==========================================================

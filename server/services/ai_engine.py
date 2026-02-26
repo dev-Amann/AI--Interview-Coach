@@ -419,6 +419,71 @@ class AIEngine:
             "optimization_tips": []
         }
 
+    def analyze_interview(self, conversation, behavioral_alerts, job_role, difficulty, user_name):
+        dialogue = ""
+        for msg in conversation:
+            role = msg.get("role", "unknown")
+            if role == "system": continue
+            speaker = "Interviewer" if role == "assistant" else user_name
+            dialogue += f"{speaker}: {msg.get('content', '')}\n"
+            
+        alerts_text = ""
+        if behavioral_alerts:
+            alerts_text = "Behavioral Alerts Detected During Interview:\n"
+            for alert in behavioral_alerts:
+                alerts_text += f"- {alert.get('message', 'Unknown alert')}\n"
+        
+        prompt = f"""
+        You are an expert Interview Assessor analyzing a {difficulty} level {job_role} interview for a candidate named {user_name}.
+        
+        Interview Transcript:
+        {dialogue}
+        
+        {alerts_text}
+        
+        Based on the transcript and any behavioral alerts, please evaluate the candidate's performance.
+        Return ONLY a JSON object with the following structure:
+        {{
+            "overall_score": <number 0-100>,
+            "communication_score": <number 0-100>,
+            "technical_score": <number 0-100>,
+            "confidence_score": <number 0-100>,
+            "body_language_score": <number 0-100>,
+            "verdict": "<short string like 'STRONG HIRE', 'READY', 'NEEDS PRACTICE'>",
+            "detailed_feedback": "<paragraph of detailed feedback>",
+            "strengths": ["strength 1", "strength 2", ...],
+            "areas_for_improvement": ["area 1", "area 2", ...],
+            "recommendations": ["rec 1", "rec 2", ...]
+        }}
+        """
+        
+        try:
+            messages = [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt}
+            ]
+            
+            response_text = self._call_llm(messages, temperature=0.3, json_mode=True)
+            if response_text:
+                result = self._clean_and_parse_json(response_text)
+                if result: return result
+                
+        except Exception as e:
+            print(f"Interview Analysis Error: {e}")
+            
+        return {
+            "overall_score": 0,
+            "communication_score": 0,
+            "technical_score": 0,
+            "confidence_score": 0,
+            "body_language_score": 0,
+            "verdict": "ERROR",
+            "detailed_feedback": "Failed to analyze the interview.",
+            "strengths": [],
+            "areas_for_improvement": [],
+            "recommendations": []
+        }
+
     def _clean_and_parse_json(self, text):
         try:
             cleaned = text.strip()
